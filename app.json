@@ -1,0 +1,14 @@
+{
+  "expo": {
+    "name": "MusicApp",
+    "slug": "music-app",
+    "version": "1.0.0",
+    "orientation": "portrait",
+    "updates": {
+      "fallbackToCacheTimeout": 0
+    },
+    "assetBundlePatterns": [
+      "**/*"
+    ]
+  }
+}
