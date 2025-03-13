@@ -1,31 +1,50 @@
 import React, { useState } from 'react';
-import { View, Text, FlatList, TouchableOpacity, Image } from 'react-native';
+import { View, Text, FlatList, TouchableOpacity, Image, TextInput } from 'react-native';
 import tw from 'twrnc';
-import useTabNavigation from '../../hooks/useTabNavigation'; 
+import { Ionicons } from '@expo/vector-icons';
+import useTabNavigation from '../../hooks/useTabNavigation';
 import NavigationBar from '../../components/MessageScreen/NavigationBar';
-const PhoneBook = () => {
-  const [activeTab, setActiveTab] = useState('Contacts');
-  const handleTabPress = useTabNavigation(); 
 
+const PhoneBook = () => {
+  const [activeTab, setActiveTab] = useState('Friends');
+  const handleTabPress = useTabNavigation();
+  const [searchQuery, setSearchQuery] = useState('');
+
+  // Danh sách liên hệ có nhóm chữ cái
   const contacts = [
-    { id: '1', name: 'Friend 1', avatar: require('../../assets/tải xuống.png') },
-    { id: '2', name: 'Friend 2', avatar: require('../../assets/tải xuống.png') },
-    { id: '3', name: 'Friend 3', avatar: require('../../assets/tải xuống.png') },
-    { id: '4', name: 'Friend 4', avatar: require('../../assets/tải xuống.png') },
+    { id: '1', name: 'Test 1', avatar: require('../../assets/avatar1.png'), group: 'A' },
+    { id: '2', name: 'Test 2', avatar: require('../../assets/avatar2.png'), group: 'B' },
+    { id: '3', name: 'Test 3', avatar: require('../../assets/avatar3.png'), group: 'B' },
+    { id: '4', name: 'Test 4', avatar: require('../../assets/avatar4.png'), group: 'B' },
+    { id: '5', name: 'Test 5', avatar: require('../../assets/avatar5.png'), group: 'D' },
   ];
 
+  // Lọc danh bạ theo tìm kiếm
+  const filteredContacts = contacts.filter((contact) =>
+    contact.name.toLowerCase().includes(searchQuery.toLowerCase())
+  );
+
+  // Tạo nhóm theo chữ cái đầu tiên
+  const groupedContacts = filteredContacts.reduce((acc, contact) => {
+    const firstLetter = contact.group;
+    if (!acc[firstLetter]) acc[firstLetter] = [];
+    acc[firstLetter].push(contact);
+    return acc;
+  }, {});
+
+  // Render danh bạ có phân nhóm chữ cái
   const renderItem = ({ item }) => (
-    <View style={tw`flex-row items-center justify-between p-4 border-b`}>
+    <View style={tw`flex-row items-center justify-between p-4 border-b border-gray-300`}>
       <View style={tw`flex-row items-center`}>
         <Image source={item.avatar} style={tw`w-12 h-12 rounded-full`} />
-        <Text style={tw`ml-4 text-base`}>{item.name}</Text>
+        <Text style={tw`ml-4 text-base font-semibold`}>{item.name}</Text>
       </View>
       <View style={tw`flex-row`}>
         <TouchableOpacity style={tw`ml-4`}>
-          <Text style={tw`text-blue-500`}>📞</Text>
+          <Ionicons name="call" size={24} color="#007AFF" />
         </TouchableOpacity>
         <TouchableOpacity style={tw`ml-4`}>
-          <Text style={tw`text-blue-500`}>📹</Text>
+          <Ionicons name="videocam" size={28} color="#007AFF" />
         </TouchableOpacity>
       </View>
     </View>
@@ -33,30 +52,59 @@ const PhoneBook = () => {
 
   return (
     <View style={tw`flex-1 bg-white`}>
-      {/* Header */}
-      <View style={tw`p-4 bg-blue-500`}>
-        <Text style={tw`text-white text-lg font-bold`}>Danh Bạ</Text>
+      {/* Header tìm kiếm */}
+      <View style={tw`p-4 bg-blue-500 flex-row items-center`}>
+        <Ionicons name="search" size={20} color="white" style={tw`mr-2`} />
+        <TextInput
+          style={tw`flex-1 bg-white rounded-md p-2 text-black`}
+          placeholder="Tìm kiếm"
+          value={searchQuery}
+          onChangeText={setSearchQuery}
+        />
+        <TouchableOpacity style={tw`ml-4`}>
+          <Ionicons name="person-add-outline" size={24} color="white" />
+        </TouchableOpacity>
       </View>
 
       {/* Tab Menu */}
       <View style={tw`flex-row justify-around border-b`}>
-        <TouchableOpacity onPress={() => setActiveTab('Contacts')}>
-          <Text style={tw`p-4 ${activeTab === 'Contacts' ? 'border-b-2 border-blue-500' : ''}`}>Danh bạ</Text>
+        <TouchableOpacity onPress={() => setActiveTab('Friends')}>
+          <Text style={tw`p-4 ${activeTab === 'Friends' ? 'border-b-2 border-blue-500 text-blue-500 font-bold' : 'text-gray-600'}`}>Bạn bè</Text>
         </TouchableOpacity>
-        <TouchableOpacity onPress={() => setActiveTab('Requests')}>
-          <Text style={tw`p-4 ${activeTab === 'Requests' ? 'border-b-2 border-blue-500' : ''}`}>Lời mời kết bạn</Text>
+        <TouchableOpacity onPress={() => setActiveTab('Groups')}>
+          <Text style={tw`p-4 ${activeTab === 'Groups' ? 'border-b-2 border-blue-500 text-blue-500 font-bold' : 'text-gray-600'}`}>Nhóm</Text>
         </TouchableOpacity>
-        <TouchableOpacity onPress={() => setActiveTab('Birthday')}>
-          <Text style={tw`p-4 ${activeTab === 'Birthday' ? 'border-b-2 border-blue-500' : ''}`}>Sinh nhật</Text>
+        <TouchableOpacity onPress={() => setActiveTab('OA')}>
+          <Text style={tw`p-4 ${activeTab === 'OA' ? 'border-b-2 border-blue-500 text-blue-500 font-bold' : 'text-gray-600'}`}>OA</Text>
         </TouchableOpacity>
       </View>
 
-      {/* Contacts List */}
+      {/* Danh bạ máy & lời mời kết bạn */}
+      <View style={tw`p-4 border-b`}>
+        <TouchableOpacity style={tw`flex-row items-center mb-2`}>
+          <Ionicons name="person-add-outline" size={24} color="#007AFF" />
+          <Text style={tw`ml-4 text-lg`}>Lời mời kết bạn</Text>
+        </TouchableOpacity>
+        <TouchableOpacity style={tw`flex-row items-center`}>
+          <Ionicons name="book-outline" size={24} color="#007AFF" />
+          <Text style={tw`ml-4 text-lg`}>Danh bạ máy</Text>
+        </TouchableOpacity>
+      </View>
+
+      {/* Danh sách bạn bè */}
       <FlatList
-        data={contacts}
-        renderItem={renderItem}
-        keyExtractor={(item) => item.id}
-        style={tw`flex-1`}
+        data={Object.keys(groupedContacts)}
+        keyExtractor={(letter) => letter}
+        renderItem={({ item: letter }) => (
+          <View>
+            <Text style={tw`bg-gray-200 p-2 text-gray-600 font-bold`}>{letter}</Text>
+            <FlatList
+              data={groupedContacts[letter]}
+              renderItem={renderItem}
+              keyExtractor={(contact) => contact.id}
+            />
+          </View>
+        )}
       />
 
       {/* Bottom Navigation Bar */}
