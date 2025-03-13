@@ -1,12 +1,13 @@
 import React from 'react';
 import { createStackNavigator } from '@react-navigation/stack';
 import { NavigationContainer } from '@react-navigation/native';
-import LaunchScreen from './components/LaunchScreen/indexrr';
+import LaunchScreen from './components/LaunchScreen/index';
 import MessageScreen from './components/MessageScreen/MassageScreen';
 import PhoneBook from './components/PhoneBook/index';
 import NewScreen from './components/NewScreen/index';
 import ProfileScreen from './components/ProfileScreen/index';
 import ExploreScreen from './components/ExploreScreen/index';
+import Login from './components/LogIn/index';
 
 const Stack = createStackNavigator();
 
@@ -20,6 +21,7 @@ export default function App() {
         <Stack.Screen name="ExploreScreen" component={ExploreScreen} />
         <Stack.Screen name="NewScreen" component={NewScreen} />
         <Stack.Screen name="ProfileScreen" component={ProfileScreen} />
+        <Stack.Screen name="Login" component={Login} />
       </Stack.Navigator>
     </NavigationContainer>
   );
