@@ -18,7 +18,7 @@ export default function LaunchScreen({ navigation }) {
       {/* Nút Tạo tài khoản mới */}
       <TouchableOpacity 
         style={tw`border border-blue-500 px-6 py-3 rounded-lg w-3/4`}
-        onPress={() => navigation.navigate('NewScreen')}
+        onPress={() => navigation.navigate('SignUp')}
       >
         <Text style={tw`text-blue-500 text-center text-lg font-bold`}>Tạo tài khoản mới</Text>
       </TouchableOpacity>

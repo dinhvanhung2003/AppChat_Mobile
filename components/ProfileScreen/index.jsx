@@ -39,7 +39,7 @@ const ProfileScreen = () => {
           <Text>zCould</Text>
           <Text style={tw`text-gray-500`}>Không gian lưu trữ trên điện đám mấy</Text>
         </TouchableOpacity>
-        <Text style={tw`mt-8`}>></Text>
+        <Text style={tw`mt-8`}></Text>
       </TouchableOpacity>
 
       {/* zStyle - Nổi bật trên Zalo */}
@@ -58,7 +58,7 @@ const ProfileScreen = () => {
           <Text>Could của tôi</Text>
           <Text style={tw`text-gray-500`}>Lưu trữ tin nhắn quan trọng</Text>
         </TouchableOpacity>
-        <Text style={tw`mt-8`}>></Text>
+        <Text style={tw`mt-8`}></Text>
       </TouchableOpacity>
 
       {/* Dữ liệu trên máy */}
@@ -68,7 +68,7 @@ const ProfileScreen = () => {
           <Text>Dữ liệu trên máy</Text>
           <Text style={tw`text-gray-500`}>Quản lý dữ liệu Zalo của bạn</Text>
         </TouchableOpacity>
-        <Text style={tw`mt-8`}>></Text>
+        <Text style={tw`mt-8`}></Text>
       </TouchableOpacity>
 
       {/* Ví QR */}
@@ -86,7 +86,7 @@ const ProfileScreen = () => {
         <TouchableOpacity style={tw`mt-5 mx-5 w-74`}>
           <Text style={tw`text-[4]`}>Tài khoản và bảo mật</Text>
         </TouchableOpacity>
-        <Text style={tw`mt-6`}>></Text>
+        <Text style={tw`mt-6`}></Text>
       </TouchableOpacity>
 
       {/* Quyền riệng tư */}
@@ -95,7 +95,7 @@ const ProfileScreen = () => {
         <TouchableOpacity style={tw`mt-5 mx-5 w-74`}>
           <Text style={tw`text-[4]`}>Quyền riệng tư</Text>
         </TouchableOpacity>
-        <Text style={tw`mt-6`}>></Text>
+        <Text style={tw`mt-6`}></Text>
       </TouchableOpacity>
 
       <View style={tw`absolute bottom-0 w-full`}>
