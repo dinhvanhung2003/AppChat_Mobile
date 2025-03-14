@@ -7,7 +7,7 @@ import NavigationBar from '../../components/MessageScreen/NavigationBar';
 import SearchBar from '../SearchBar/index';
 const PhoneBook = () => {
   const [activeTab, setActiveTab] = useState('Friends');
-  const handleTabPress = useTabNavigation();
+  // const handleTabPress = useTabNavigation();
   const [searchQuery, setSearchQuery] = useState('');
 
   // Danh sách liên hệ có nhóm chữ cái
@@ -101,7 +101,7 @@ const PhoneBook = () => {
 
       {/* Bottom Navigation Bar */}
       <View style={tw`absolute bottom-0 w-full`}>
-        <NavigationBar activeTab={activeTab} onTabPress={handleTabPress} />
+      <NavigationBar activeTab="Contacts" />
       </View>
     </View>
   );
