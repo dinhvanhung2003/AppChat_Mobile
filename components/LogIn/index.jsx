@@ -20,7 +20,7 @@ const LoginScreen = ({navigation}) => {
             <TouchableOpacity style={{width:'80%',marginBottom:70}}>
                 <Text style={{flexDirection: 'row', alignItems: 'center', borderBottomWidth: 1, borderColor: '#ccc', paddingVertical: 8,}}>
                     <TextInput
-                        placeholder="Số điện thoại"
+                        placeholder="Gmail"
                         style={{
                             flex: 1, fontSize: 16,color: '#333',
                         }}
