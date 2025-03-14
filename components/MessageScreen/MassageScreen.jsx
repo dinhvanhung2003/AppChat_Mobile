@@ -1,11 +1,10 @@
-import React, { useState } from 'react';
+import React from 'react';
 import { View, Text } from 'react-native';
 import NavigationBar from './NavigationBar';
 import tw from 'twrnc';
 import useTabNavigation from '../../hooks/useTabNavigation'; // Import custom hook
 
 const MessageScreen = () => {
-  const [activeTab, setActiveTab] = useState('Messages');
   const handleTabPress = useTabNavigation(); // Use the custom hook
 
   return (
@@ -14,7 +13,7 @@ const MessageScreen = () => {
         <Text style={tw`text-xl`}>Welcome to the Message Screen!</Text>
       </View>
       <View style={tw`absolute bottom-0 w-full`}>
-        <NavigationBar activeTab={activeTab} onTabPress={handleTabPress} />
+        <NavigationBar activeTab="Messages" />
       </View>
     </View>
   );

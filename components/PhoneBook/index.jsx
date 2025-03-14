@@ -4,19 +4,22 @@ import tw from 'twrnc';
 import { Ionicons } from '@expo/vector-icons';
 import useTabNavigation from '../../hooks/useTabNavigation';
 import NavigationBar from '../../components/MessageScreen/NavigationBar';
-
+import SearchBar from '../SearchBar/index';
 const PhoneBook = () => {
   const [activeTab, setActiveTab] = useState('Friends');
-  const handleTabPress = useTabNavigation();
+  // const handleTabPress = useTabNavigation();
   const [searchQuery, setSearchQuery] = useState('');
 
   // Danh sách liên hệ có nhóm chữ cái
   const contacts = [
-    { id: '1', name: 'Test 1', avatar: require('../../assets/avatar1.png'), group: 'A' },
-    { id: '2', name: 'Test 2', avatar: require('../../assets/avatar2.png'), group: 'B' },
-    { id: '3', name: 'Test 3', avatar: require('../../assets/avatar3.png'), group: 'B' },
-    { id: '4', name: 'Test 4', avatar: require('../../assets/avatar4.png'), group: 'B' },
-    { id: '5', name: 'Test 5', avatar: require('../../assets/avatar5.png'), group: 'D' },
+    { id: '1', name: 'Test 1', avatar: require('../../assets/Avatar/test.png'), group: 'A' },
+    { id: '2', name: 'Test 2', avatar: require('../../assets/Avatar/test.png'), group: 'B' },
+    { id: '3', name: 'Test 3', avatar: require('../../assets/Avatar/test.png'), group: 'B' },
+    { id: '4', name: 'Test 4', avatar: require('../../assets/Avatar/test.png'), group: 'B' },
+    { id: '5', name: 'Test 5', avatar: require('../../assets/Avatar/test.png'), group: 'D' },
+    { id: '6', name: 'Test 5', avatar: require('../../assets/Avatar/test.png'), group: 'D' },
+    { id: '7', name: 'Test 5', avatar: require('../../assets/Avatar/test.png'), group: 'D' },
+    { id: '8', name: 'Test 5', avatar: require('../../assets/Avatar/test.png'), group: 'D' },
   ];
 
   // Lọc danh bạ theo tìm kiếm
@@ -51,20 +54,9 @@ const PhoneBook = () => {
   );
 
   return (
-    <View style={tw`flex-1 bg-white`}>
+    <View style={tw`flex-1 bg-white mt-10`}>
       {/* Header tìm kiếm */}
-      <View style={tw`p-4 bg-blue-500 flex-row items-center`}>
-        <Ionicons name="search" size={20} color="white" style={tw`mr-2`} />
-        <TextInput
-          style={tw`flex-1 bg-white rounded-md p-2 text-black`}
-          placeholder="Tìm kiếm"
-          value={searchQuery}
-          onChangeText={setSearchQuery}
-        />
-        <TouchableOpacity style={tw`ml-4`}>
-          <Ionicons name="person-add-outline" size={24} color="white" />
-        </TouchableOpacity>
-      </View>
+      <SearchBar searchQuery={searchQuery} setSearchQuery={setSearchQuery} />
 
       {/* Tab Menu */}
       <View style={tw`flex-row justify-around border-b`}>
@@ -109,7 +101,7 @@ const PhoneBook = () => {
 
       {/* Bottom Navigation Bar */}
       <View style={tw`absolute bottom-0 w-full`}>
-        <NavigationBar activeTab={activeTab} onTabPress={handleTabPress} />
+      <NavigationBar activeTab="Contacts" />
       </View>
     </View>
   );
