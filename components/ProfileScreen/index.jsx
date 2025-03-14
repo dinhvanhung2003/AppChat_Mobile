@@ -3,10 +3,12 @@ import { View, Text,TouchableOpacity ,Image,TextInput} from 'react-native';
 import NavigationBar from '../../components/MessageScreen/NavigationBar';
 import tw from 'twrnc';
 import useTabNavigation from '../../hooks/useTabNavigation'; 
+import { useNavigation } from '@react-navigation/native';
 
 const ProfileScreen = () => {
   const [activeTab, setActiveTab] = useState('Account');
   const handleTabPress = useTabNavigation(); 
+  const navigation = useNavigation(); 
 
   return (
     <View style={tw`flex-1 bg-[#645C5CB2]`}>
@@ -39,7 +41,6 @@ const ProfileScreen = () => {
           <Text>zCould</Text>
           <Text style={tw`text-gray-500`}>Không gian lưu trữ trên điện đám mấy</Text>
         </TouchableOpacity>
-        <Text style={tw`mt-8`}></Text>
       </TouchableOpacity>
 
       {/* zStyle - Nổi bật trên Zalo */}
@@ -58,7 +59,6 @@ const ProfileScreen = () => {
           <Text>Could của tôi</Text>
           <Text style={tw`text-gray-500`}>Lưu trữ tin nhắn quan trọng</Text>
         </TouchableOpacity>
-        <Text style={tw`mt-8`}></Text>
       </TouchableOpacity>
 
       {/* Dữ liệu trên máy */}
@@ -68,7 +68,6 @@ const ProfileScreen = () => {
           <Text>Dữ liệu trên máy</Text>
           <Text style={tw`text-gray-500`}>Quản lý dữ liệu Zalo của bạn</Text>
         </TouchableOpacity>
-        <Text style={tw`mt-8`}></Text>
       </TouchableOpacity>
 
       {/* Ví QR */}
@@ -86,16 +85,23 @@ const ProfileScreen = () => {
         <TouchableOpacity style={tw`mt-5 mx-5 w-74`}>
           <Text style={tw`text-[4]`}>Tài khoản và bảo mật</Text>
         </TouchableOpacity>
-        <Text style={tw`mt-6`}></Text>
       </TouchableOpacity>
 
       {/* Quyền riệng tư */}
       <TouchableOpacity style={tw` h-15 px-5 flex-row bg-white`}>
         <Image source={require('../../assets/ProfileScreen/Icon/anh3.png')} style={tw`mt-6`}/>
         <TouchableOpacity style={tw`mt-5 mx-5 w-74`}>
-          <Text style={tw`text-[4]`}>Quyền riệng tư</Text>
+          <Text style={tw`text-[4]`}>Quyền riêng tư</Text>
         </TouchableOpacity>
-        <Text style={tw`mt-6`}></Text>
+      </TouchableOpacity>
+
+      {/* Quyền riệng tư */}
+      <TouchableOpacity 
+        style={tw` h-15 px-5 flex-row bg-white mt-2`} 
+        onPress={() => navigation.navigate('LaunchScreen')}>
+          <Image source={require('../../assets/ProfileScreen/Icon/anh3.png')} style={tw`mt-6`}/>
+          
+          <Text style={tw`text-[5] pt-5 ml-5`}>Đăng xuất</Text>
       </TouchableOpacity>
 
       <View style={tw`absolute bottom-0 w-full`}>
