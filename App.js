@@ -2,7 +2,6 @@ import React from 'react';
 import { createStackNavigator } from '@react-navigation/stack';
 import { NavigationContainer } from '@react-navigation/native';
 import LaunchScreen from './components/LaunchScreen/index';
-import LaunchScreen from './components/LaunchScreen/index';
 import MessageScreen from './components/MessageScreen/MassageScreen';
 import PhoneBook from './components/PhoneBook/index';
 import NewScreen from './components/NewScreen/index';
