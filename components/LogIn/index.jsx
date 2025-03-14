@@ -18,12 +18,15 @@ const LoginScreen = ({navigation}) => {
             }}>Zalo</Text>
 
             <TouchableOpacity style={{width:'80%',marginBottom:70}}>
-                <TextInput
-                    placeholder="Số điện thoại"
-                    style={{
-                        flex: 1, fontSize: 16, color: '#333',borderBottomWidth: 1, borderColor: '#ccc'
-                    }}
-                />
+                <Text style={{flexDirection: 'row', alignItems: 'center', borderBottomWidth: 1, borderColor: '#ccc', paddingVertical: 8,}}>
+                    <TextInput
+                        placeholder="Số điện thoại"
+                        style={{
+                            flex: 1, fontSize: 16,color: '#333',
+                        }}
+                    />
+                </Text>
+                
                 <View style={{flexDirection: 'row', alignItems: 'center', borderBottomWidth: 1, borderColor: '#ccc', paddingVertical: 8,}}>
                     <TextInput
                         placeholder="Mật khẩu"
@@ -41,7 +44,9 @@ const LoginScreen = ({navigation}) => {
             
 
             {/* Btn_DN */}
-            <TouchableOpacity style={{backgroundColor: '#3B82F6',paddingHorizontal: 24,paddingVertical: 12,borderRadius: 10,marginBottom: 16, width: '80%', alignItems: 'center',}}>
+            <TouchableOpacity style={{backgroundColor: '#3B82F6',paddingHorizontal: 24,paddingVertical: 12,borderRadius: 10,marginBottom: 16, width: '80%', alignItems: 'center',}}
+                onPress={() => navigation.navigate('MessageScreen')}
+            >
                 <Text style={{color: '#fff',fontSize: 16,fontWeight: 'bold',}}>ĐĂNG NHẬP VỚI MẬT KHẨU</Text>
             </TouchableOpacity>
             
@@ -52,7 +57,7 @@ const LoginScreen = ({navigation}) => {
 
             <View style={{flexDirection: 'row',alignItems: 'center',marginTop:50}}>
                 <Text style={{fontSize: 16, color: '#000',}}>Chưa có tài khoản? </Text>
-                <TouchableOpacity onPress={() => console.log('Đi đến trang Đăng Ký')}>
+                <TouchableOpacity onPress={() => navigation.navigate('SignUp')}>
                     <Text style={{fontSize: 16, color: '#3B82F6',fontWeight: 'bold',}}>Đăng Ký</Text>
                 </TouchableOpacity>
             </View>
