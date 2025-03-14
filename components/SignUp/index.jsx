@@ -62,7 +62,7 @@ const SignupScreen = ({ navigation }) => {
   // Hoàn tất đăng ký
   const handleComplete = () => {
     Alert.alert("Chúc mừng!", "Bạn đã đăng ký thành công!");
-    navigation.navigate("HomeScreen"); // Chuyển sang màn hình chính
+    navigation.navigate("MessageScreen"); // Chuyển sang màn hình chính
   };
 
   return (
