@@ -10,7 +10,7 @@ export default function LaunchScreen({ navigation }) {
       {/* Nút Đăng nhập */}
       <TouchableOpacity 
         style={tw`bg-blue-500 px-6 py-3 rounded-lg mb-4 w-3/4`}
-        onPress={() => navigation.navigate('MessageScreen')}
+        onPress={() => navigation.navigate('Login')}
       >
         <Text style={tw`text-white text-center text-lg font-bold`}>Đăng nhập</Text>
       </TouchableOpacity>
