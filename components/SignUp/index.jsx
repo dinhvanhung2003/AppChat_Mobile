@@ -33,29 +33,34 @@ const SignupScreen = ({ navigation }) => {
     }
 
     try {
-      // Đăng ký với Firebase Auth
       const userCredential = await createUserWithEmailAndPassword(FIREBASE_AUTH, email, password);
       const firebaseUser = userCredential.user;
-
-      // Gửi email xác thực
+    
       await sendEmailVerification(firebaseUser);
-
-      // Gửi thông tin lên server backend của bạn
-      await fetch(`${API_URL}/users/signup`, {
+    
+      // ✅ Gọi API backend để lưu thông tin vào MongoDB
+      const response = await fetch(`${API_URL}/users/signup`, {
         method: "POST",
         headers: { "Content-Type": "application/json" },
-        body: JSON.stringify({ fullName, email, password }),
+        body: JSON.stringify({ fullName, email, password }), // avatar nếu có
       });
-
-      Alert.alert(
-        "Đăng ký thành công!",
-        "Vui lòng kiểm tra email để xác thực tài khoản trước khi đăng nhập."
-      );
+    
+      const data = await response.json();
+    
+      if (!response.ok) {
+        console.log("❌ Lỗi từ backend:", data);
+        Alert.alert("Lỗi server", data.error || "Không thể lưu user vào MongoDB");
+        return;
+      }
+    
+      Alert.alert("✅ Thành công", "Vui lòng kiểm tra email xác thực.");
       navigation.navigate("Login");
-
+    
     } catch (error) {
-      Alert.alert("Lỗi", error.message || "Đăng ký thất bại!");
+      console.log("❌ Lỗi fetch Firebase hoặc backend:", error.message);
+      Alert.alert("Lỗi", error.message);
     }
+    
   };
 
   return (
