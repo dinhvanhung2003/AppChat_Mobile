@@ -1,7 +1,17 @@
 import React, { useState } from "react";
-import { View, Text, TextInput, Alert, TouchableOpacity, ScrollView } from "react-native";
+import {
+  View,
+  Text,
+  TextInput,
+  Alert,
+  TouchableOpacity,
+  ScrollView,
+} from "react-native";
 import { Button } from "react-native-paper";
 import tw from "twrnc";
+
+import { createUserWithEmailAndPassword, sendEmailVerification } from "firebase/auth";
+import { FIREBASE_AUTH } from "../../configs/fireBaseConfig"; 
 
 const API_URL = "http://192.168.1.6:5000";
 
@@ -23,24 +33,28 @@ const SignupScreen = ({ navigation }) => {
     }
 
     try {
-      const response = await fetch(`${API_URL}/users/signup`, {
+      // Đăng ký với Firebase Auth
+      const userCredential = await createUserWithEmailAndPassword(FIREBASE_AUTH, email, password);
+      const firebaseUser = userCredential.user;
+
+      // Gửi email xác thực
+      await sendEmailVerification(firebaseUser);
+
+      // Gửi thông tin lên server backend của bạn
+      await fetch(`${API_URL}/users/signup`, {
         method: "POST",
-        headers: {
-          "Content-Type": "application/json",
-        },
+        headers: { "Content-Type": "application/json" },
         body: JSON.stringify({ fullName, email, password }),
       });
 
-      const data = await response.json();
+      Alert.alert(
+        "Đăng ký thành công!",
+        "Vui lòng kiểm tra email để xác thực tài khoản trước khi đăng nhập."
+      );
+      navigation.navigate("Login");
 
-      if (response.ok) {
-        Alert.alert("Đăng ký thành công!", "Vui lòng đăng nhập.");
-        navigation.navigate("Login");
-      } else {
-        Alert.alert("Lỗi", data.error || "Đăng ký thất bại!");
-      }
     } catch (error) {
-      Alert.alert("Lỗi", "Không thể kết nối đến máy chủ.");
+      Alert.alert("Lỗi", error.message || "Đăng ký thất bại!");
     }
   };
 
