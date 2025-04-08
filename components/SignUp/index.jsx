@@ -1,7 +1,17 @@
 import React, { useState } from "react";
-import { View, Text, TextInput, Alert, TouchableOpacity, ScrollView } from "react-native";
+import {
+  View,
+  Text,
+  TextInput,
+  Alert,
+  TouchableOpacity,
+  ScrollView,
+} from "react-native";
 import { Button } from "react-native-paper";
 import tw from "twrnc";
+
+import { createUserWithEmailAndPassword, sendEmailVerification } from "firebase/auth";
+import { FIREBASE_AUTH } from "../../configs/fireBaseConfig"; 
 
 const API_URL = "http://192.168.1.6:5000";
 
@@ -23,25 +33,34 @@ const SignupScreen = ({ navigation }) => {
     }
 
     try {
+      const userCredential = await createUserWithEmailAndPassword(FIREBASE_AUTH, email, password);
+      const firebaseUser = userCredential.user;
+    
+      await sendEmailVerification(firebaseUser);
+    
+      // ✅ Gọi API backend để lưu thông tin vào MongoDB
       const response = await fetch(`${API_URL}/users/signup`, {
         method: "POST",
-        headers: {
-          "Content-Type": "application/json",
-        },
-        body: JSON.stringify({ fullName, email, password }),
+        headers: { "Content-Type": "application/json" },
+        body: JSON.stringify({ fullName, email, password }), // avatar nếu có
       });
-
+    
       const data = await response.json();
-
-      if (response.ok) {
-        Alert.alert("Đăng ký thành công!", "Vui lòng đăng nhập.");
-        navigation.navigate("Login");
-      } else {
-        Alert.alert("Lỗi", data.error || "Đăng ký thất bại!");
+    
+      if (!response.ok) {
+        console.log("❌ Lỗi từ backend:", data);
+        Alert.alert("Lỗi server", data.error || "Không thể lưu user vào MongoDB");
+        return;
       }
+    
+      Alert.alert("✅ Thành công", "Vui lòng kiểm tra email xác thực.");
+      navigation.navigate("Login");
+    
     } catch (error) {
-      Alert.alert("Lỗi", "Không thể kết nối đến máy chủ.");
+      console.log("❌ Lỗi fetch Firebase hoặc backend:", error.message);
+      Alert.alert("Lỗi", error.message);
     }
+    
   };
 
   return (
