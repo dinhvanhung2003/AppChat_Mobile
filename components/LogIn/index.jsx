@@ -3,7 +3,10 @@ import { View, Text, TextInput, TouchableOpacity, Alert } from "react-native";
 import AsyncStorage from "@react-native-async-storage/async-storage"; 
 import { useNavigation } from "@react-navigation/native";
 
-const API_URL = "http://192.168.1.10:5000"; 
+const API_URL = "http://192.168.1.6:5000"; 
+// const API_URL = "http://192.168.188.24:5000"; 
+
+
 
 const LoginScreen = ({ navigation }) => {
     const [email, setEmail] = useState("");
