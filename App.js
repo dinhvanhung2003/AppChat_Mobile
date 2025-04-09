@@ -8,8 +8,12 @@ import NewScreen from './components/NewScreen/index';
 import ProfileScreen from './components/ProfileScreen/index';
 import ExploreScreen from './components/ExploreScreen/index';
 import Login from './components/LogIn/index';
-
+import ForgotPassword from './components/LogIn/ForgotPassword';
 import SignUp from './components/SignUp/index';
+import VerifyOtpScreen from './components/LogIn/VerifyOTP';
+import ResetPasswordScreen from './components/LogIn/ResetPasswordScreen';
+import ChangePass from './components/ProfileScreen/ChangePassword';
+import EditProfile from './components/ProfileScreen/EditProfile';
 const Stack = createStackNavigator();
 
 export default function App() {
@@ -19,6 +23,11 @@ export default function App() {
         <Stack.Screen name="LaunchScreen" component={LaunchScreen} />
         <Stack.Screen name="SignUp" component={SignUp} />
         <Stack.Screen name="MessageScreen" component={MessageScreen} />
+        <Stack.Screen name="ForgotPassword" component={ForgotPassword} />
+        <Stack.Screen name="VerifyOtpScreen" component={VerifyOtpScreen} />
+        <Stack.Screen name="ResetPasswordScreen" component={ResetPasswordScreen} />
+        <Stack.Screen name="ChangePass" component={ChangePass} />
+        <Stack.Screen name="EditProfile" component={EditProfile} />
         <Stack.Screen name="PhoneBook" component={PhoneBook} />
         <Stack.Screen name="ExploreScreen" component={ExploreScreen} />
         <Stack.Screen name="NewScreen" component={NewScreen} />
