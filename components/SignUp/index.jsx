@@ -10,10 +10,7 @@ import {
 import { Button } from "react-native-paper";
 import tw from "twrnc";
 
-import { createUserWithEmailAndPassword, sendEmailVerification } from "firebase/auth";
-import { FIREBASE_AUTH } from "../../configs/fireBaseConfig"; 
-
-const API_URL = "http://192.168.1.6:5000";
+const API_URL = "http://192.168.1.6:5000"; 
 
 const SignupScreen = ({ navigation }) => {
   const [fullName, setFullName] = useState("");
@@ -33,38 +30,28 @@ const SignupScreen = ({ navigation }) => {
     }
 
     try {
-      const userCredential = await createUserWithEmailAndPassword(FIREBASE_AUTH, email, password);
-      const firebaseUser = userCredential.user;
-    
-      await sendEmailVerification(firebaseUser);
-    
-      // ✅ Gọi API backend để lưu thông tin vào MongoDB
       const response = await fetch(`${API_URL}/users/signup`, {
         method: "POST",
         headers: { "Content-Type": "application/json" },
-        body: JSON.stringify({ fullName, email, password }), // avatar nếu có
+        body: JSON.stringify({ fullName, email, password }),
       });
-    
+
       const data = await response.json();
-    
+
       if (!response.ok) {
-        console.log("❌ Lỗi từ backend:", data);
-        Alert.alert("Lỗi server", data.error || "Không thể lưu user vào MongoDB");
+        Alert.alert("Lỗi", data.error || "Đăng ký thất bại!");
         return;
       }
-    
-      Alert.alert("✅ Thành công", "Vui lòng kiểm tra email xác thực.");
+
+      Alert.alert("✅ Thành công", "Đăng ký thành công, vui lòng đăng nhập.");
       navigation.navigate("Login");
-    
     } catch (error) {
-      console.log("❌ Lỗi fetch Firebase hoặc backend:", error.message);
-      Alert.alert("Lỗi", error.message);
+      Alert.alert("Lỗi kết nối", error.message);
     }
-    
   };
 
   return (
-    <ScrollView contentContainerStyle={tw`flex-1 bg-gradient-to-b from-blue-100 to-white`}>
+    <ScrollView contentContainerStyle={tw`flex-1 bg-white`}>
       <View style={tw`flex-1 justify-center px-6 py-12`}>
         <View style={tw`bg-white p-6 rounded-2xl shadow-lg`}>
           <Text style={tw`text-3xl font-bold text-center text-blue-700 mb-6`}>

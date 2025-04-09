@@ -1,10 +1,18 @@
-import React, { useEffect, useState } from 'react';
-import { View, Text, TouchableOpacity, Image, TextInput } from 'react-native';
-import AsyncStorage from "@react-native-async-storage/async-storage";
+import React, { useState } from 'react';
+import {
+  View,
+  Text,
+  TouchableOpacity,
+  TextInput,
+  Alert,
+  Image,
+} from 'react-native';
+import AsyncStorage from '@react-native-async-storage/async-storage';
 import NavigationBar from '../../components/MessageScreen/NavigationBar';
 import tw from 'twrnc';
 import useTabNavigation from '../../hooks/useTabNavigation';
-import { useNavigation } from '@react-navigation/native';
+import { useNavigation, useFocusEffect } from '@react-navigation/native';
+import MaterialIcons from 'react-native-vector-icons/MaterialIcons';
 
 const ProfileScreen = ({ route }) => {
   const [activeTab, setActiveTab] = useState('Account');
@@ -13,117 +21,85 @@ const ProfileScreen = ({ route }) => {
 
   const [user, setUser] = useState(null);
 
-  useEffect(() => {
-    const fetchUser = async () => {
-      if (route.params?.user) {
-        setUser(route.params.user);
-        await AsyncStorage.setItem("user", JSON.stringify(route.params.user));
-      } else {
-        const storedUser = await AsyncStorage.getItem("user");
+  useFocusEffect(
+    React.useCallback(() => {
+      const fetchUser = async () => {
+        const storedUser = await AsyncStorage.getItem('user');
         if (storedUser) {
           setUser(JSON.parse(storedUser));
         }
-      }
-    };
-    fetchUser();
-  }, []);
+      };
+      fetchUser();
+    }, [])
+  );
+
+  const MenuItem = ({ icon, text, onPress }) => (
+    <TouchableOpacity
+      style={tw`flex-row items-center px-5 py-4 bg-white border-b border-gray-200`}
+      onPress={onPress}
+    >
+      <MaterialIcons name={icon} size={24} color="#3B82F6" />
+      <Text style={tw`ml-4 text-base`}>{text}</Text>
+    </TouchableOpacity>
+  );
 
   return (
-    <View style={tw`flex-1 bg-[#645C5CB2]`}>
-
-      {/* Tìm kiếm */}
-      <TouchableOpacity style={tw`bg-blue-500 h-15 px-5 flex-row`}>
-        <Image source={require('../../assets/ProfileScreen/Icon/kinh.png')} style={tw`mt-6`} />
+    <View style={tw`flex-1 bg-gray-100 mt-10`}>
+      {/* Header tìm kiếm */}
+      <View style={tw`flex-row items-center bg-blue-500 px-4 py-3`}>
+        <MaterialIcons name="search" size={24} color="white" />
         <TextInput
           placeholder="Tìm kiếm"
-          placeholderTextColor="lightgray"
-          style={tw`w-75 mt-3 ml-5 mr-3`}
+          placeholderTextColor="white"
+          style={tw`flex-1 text-white ml-4`}
         />
-        <Image source={require('../../assets/ProfileScreen/Icon/caidat.png')} style={tw`mt-6`} />
-      </TouchableOpacity>
+        <MaterialIcons name="settings" size={24} color="white" />
+      </View>
 
-      {/* Cá nhân */}
-      <TouchableOpacity style={tw` h-22 flex-row bg-white`}>
-        <Image source={require('../../assets/ProfileScreen/Icon/Avt.png')} style={tw``} />
-        <TouchableOpacity style={tw`mt-6 w-73`}>
-          <Text>{user ? user.fullName : 'Người dùng'}</Text>
-          <Text style={tw`text-gray-500`}>Xem trang cá nhân</Text>
-        </TouchableOpacity>
-        <Image source={require('../../assets/ProfileScreen/Icon/anh1.png')} style={tw`mt-8`} />
-      </TouchableOpacity>
+      {/* Thông tin người dùng */}
+      <View style={tw`flex-row items-center bg-white px-5 py-4 border-b border-gray-200`}>
+        <Image
+          source={{
+            uri:
+              user?.avatar ||
+              'https://icon-library.com/images/anonymous-avatar-icon/anonymous-avatar-icon-25.jpg',
+          }}
+          style={tw`w-14 h-14 rounded-full border border-gray-300`}
+        />
+        <View style={tw`ml-4`}>
+          <Text style={tw`text-lg font-semibold`}>
+            {user?.fullName || 'Người dùng'}
+          </Text>
+          <TouchableOpacity onPress={() => navigation.navigate('EditProfile', { user })}>
+            <Text style={tw`text-gray-500`}>Xem trang cá nhân</Text>
+          </TouchableOpacity>
+        </View>
+      </View>
 
-      {/* zCould */}
-      <TouchableOpacity style={tw` h-20 mt-2 px-5 flex-row bg-white`}>
-        <Image source={require('../../assets/ProfileScreen/Icon/Clound.png')} style={tw`mt-8`} />
-        <TouchableOpacity style={tw`mt-5 mx-5 w-74`}>
-          <Text>zCould</Text>
-          <Text style={tw`text-gray-500`}>Không gian lưu trữ trên điện đám mấy</Text>
-        </TouchableOpacity>
-      </TouchableOpacity>
-
-      {/* zStyle */}
-      <TouchableOpacity style={tw` h-20  px-5 flex-row bg-white`}>
-        <Image source={require('../../assets/ProfileScreen/Icon/Clound.png')} style={tw`mt-8`} />
-        <TouchableOpacity style={tw`mt-5 mx-5 w-74`}>
-          <Text>zStyle - Nổi bật trên Zalo</Text>
-          <Text style={tw`text-gray-500`}>Hình nền và nhạc cho cuộc gọi Zalo</Text>
-        </TouchableOpacity>
-      </TouchableOpacity>
-
-      {/* Could của tôi */}
-      <TouchableOpacity style={tw` h-20 mt-2 px-5 flex-row bg-white`}>
-        <Image source={require('../../assets/ProfileScreen/Icon/Clound.png')} style={tw`mt-8`} />
-        <TouchableOpacity style={tw`mt-5 mx-5 w-74`}>
-          <Text>Could của tôi</Text>
-          <Text style={tw`text-gray-500`}>Lưu trữ tin nhắn quan trọng</Text>
-        </TouchableOpacity>
-      </TouchableOpacity>
-
-      {/* Dữ liệu trên máy */}
-      <TouchableOpacity style={tw` h-20 px-5 flex-row bg-white`}>
-        <Image source={require('../../assets/ProfileScreen/Icon/lock.png')} style={tw`mt-8`} />
-        <TouchableOpacity style={tw`mt-5 mx-5 w-75`}>
-          <Text>Dữ liệu trên máy</Text>
-          <Text style={tw`text-gray-500`}>Quản lý dữ liệu Zalo của bạn</Text>
-        </TouchableOpacity>
-      </TouchableOpacity>
-
-      {/* Ví QR */}
-      <TouchableOpacity style={tw` h-20 px-5 flex-row bg-white`}>
-        <Image source={require('../../assets/ProfileScreen/Icon/Vi.png')} style={tw`mt-8`} />
-        <TouchableOpacity style={tw`mt-5 mx-5 w-74`}>
-          <Text>Ví QR</Text>
-          <Text style={tw`text-gray-500`}>Lưu trữ và xuất trình các mã QR quan trọng</Text>
-        </TouchableOpacity>
-      </TouchableOpacity>
-
-      {/* Tài khoản và bảo mật */}
-      <TouchableOpacity style={tw` h-15 mt-2 px-5 flex-row bg-white`}>
-        <Image source={require('../../assets/ProfileScreen/Icon/anh2.png')} style={tw`mt-6`} />
-        <TouchableOpacity style={tw`mt-5 mx-5 w-74`}>
-          <Text style={tw`text-[4]`}>Tài khoản và bảo mật</Text>
-        </TouchableOpacity>
-      </TouchableOpacity>
-
-      {/* Quyền riêng tư */}
-      <TouchableOpacity style={tw` h-15 px-5 flex-row bg-white`}>
-        <Image source={require('../../assets/ProfileScreen/Icon/anh3.png')} style={tw`mt-6`} />
-        <TouchableOpacity style={tw`mt-5 mx-5 w-74`}>
-          <Text style={tw`text-[4]`}>Quyền riêng tư</Text>
-        </TouchableOpacity>
-      </TouchableOpacity>
+      {/* Danh sách chức năng */}
+      <MenuItem icon="cloud" text="Cloud của tôi" />
+      <MenuItem icon="folder" text="Dữ liệu trên máy" />
+      <MenuItem icon="qr-code" text="Ví QR" />
+      <MenuItem
+        icon="security"
+        text="Đổi mật khẩu"
+        onPress={() => navigation.navigate('ChangePass')}
+      />
+      <MenuItem icon="lock" text="Quyền riêng tư" />
 
       {/* Đăng xuất */}
       <TouchableOpacity
-        style={tw` h-15 px-5 flex-row bg-white mt-2`}
         onPress={async () => {
-          await AsyncStorage.removeItem("user");
+          await AsyncStorage.removeItem('user');
           navigation.navigate('Login');
-        }}>
-        <Image source={require('../../assets/ProfileScreen/Icon/anh3.png')} style={tw`mt-6`} />
-        <Text style={tw`text-[5] pt-5 ml-5`}>Đăng xuất</Text>
+        }}
+        style={tw`flex-row items-center px-5 py-4 bg-white mt-4`}
+      >
+        <MaterialIcons name="logout" size={24} color="#DC2626" />
+        <Text style={tw`ml-4 text-red-600 font-semibold`}>Đăng xuất</Text>
       </TouchableOpacity>
 
+      {/* Navigation Bar */}
       <View style={tw`absolute bottom-0 w-full`}>
         <NavigationBar activeTab={activeTab} onTabPress={handleTabPress} />
       </View>

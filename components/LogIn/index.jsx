@@ -1,10 +1,13 @@
 import React, { useState } from "react";
-import { View, Text, TextInput, TouchableOpacity, Alert } from "react-native";
+import {
+  View,
+  Text,
+  TextInput,
+  TouchableOpacity,
+  Alert,
+} from "react-native";
 import AsyncStorage from "@react-native-async-storage/async-storage";
-import { useNavigation } from "@react-navigation/native";
-
-import { signInWithEmailAndPassword } from "firebase/auth";
-import { FIREBASE_AUTH } from "../../configs/fireBaseConfig"; 
+import tw from "twrnc";
 
 const API_URL = "http://192.168.1.6:5000";
 
@@ -20,23 +23,10 @@ const LoginScreen = ({ navigation }) => {
     }
 
     try {
-      // Đăng nhập bằng Firebase
-      const userCredential = await signInWithEmailAndPassword(FIREBASE_AUTH, email, password);
-      const user = userCredential.user;
-
-      // Reload để chắc chắn trạng thái xác thực mới nhất
-      await user.reload();
-
-      if (!user.emailVerified) {
-        Alert.alert("Lỗi", "Email chưa được xác thực. Vui lòng kiểm tra email của bạn.");
-        return;
-      }
-
-      // Gọi API backend nếu bạn cần xác thực thêm (tùy chọn)
       const response = await fetch(`${API_URL}/users/signin`, {
         method: "POST",
         headers: { "Content-Type": "application/json" },
-        body: JSON.stringify({ email, password }), // hoặc JWT token nếu backend yêu cầu
+        body: JSON.stringify({ email, password }),
       });
 
       const data = await response.json();
@@ -45,24 +35,16 @@ const LoginScreen = ({ navigation }) => {
         await AsyncStorage.setItem("user", JSON.stringify(data));
         navigation.navigate("ProfileScreen", { user: data });
       } else {
-        Alert.alert("Lỗi", data.error || "Đăng nhập thất bại từ server!");
+        Alert.alert("Lỗi", data.error || "Đăng nhập thất bại!");
       }
-
     } catch (error) {
-      Alert.alert("Lỗi đăng nhập", error.message);
+      Alert.alert("Lỗi kết nối", error.message);
     }
   };
 
   return (
-    <View style={{ flex: 1, padding: 20, alignItems: 'center' }}>
-      <Text style={{
-        fontSize: 50,
-        fontWeight: 'bold',
-        color: '#3B82F6',
-        marginBottom: 48,
-        marginTop: 200,
-        marginBottom: 50
-      }}>Zalo</Text>
+    <View style={tw`flex-1 bg-white justify-center items-center px-6`}>
+      <Text style={tw`text-blue-600 text-5xl font-bold mb-12`}>Zalo</Text>
 
       {/* Email */}
       <TextInput
@@ -71,43 +53,52 @@ const LoginScreen = ({ navigation }) => {
         onChangeText={setEmail}
         keyboardType="email-address"
         autoCapitalize="none"
-        style={{ width: '80%', fontSize: 16, borderBottomWidth: 1, borderColor: '#ccc', paddingVertical: 8 }}
+        style={tw`w-full border-b border-gray-300 text-base pt-4 pb-2 mb-6`}
+        placeholderTextColor="#999"
       />
 
+
       {/* Mật khẩu */}
-      <View style={{ width: '80%', flexDirection: 'row', alignItems: 'center', borderBottomWidth: 1, borderColor: '#ccc', paddingVertical: 8 }}>
+      <View style={tw`w-full flex-row items-center border-b border-gray-300 pt-4 pb-2 mb-6`}>
         <TextInput
           placeholder="Mật khẩu"
           value={password}
           onChangeText={setPassword}
           secureTextEntry={secureText}
-          style={{ flex: 1, fontSize: 16, color: '#333' }}
+          style={tw`flex-1 text-base`}
+          placeholderTextColor="#999"
         />
         <TouchableOpacity onPress={() => setSecureText(!secureText)}>
-          <Text style={{ fontSize: 16, color: '#3B82F6', fontWeight: 'bold', marginLeft: 10 }}>
-            {secureText ? 'Hiện' : 'Ẩn'}
+          <Text style={tw`text-blue-600 font-bold ml-3`}>
+            {secureText ? "Hiện" : "Ẩn"}
           </Text>
         </TouchableOpacity>
       </View>
 
+
+
       {/* Nút đăng nhập */}
       <TouchableOpacity
-        style={{ backgroundColor: '#3B82F6', paddingHorizontal: 24, paddingVertical: 12, borderRadius: 10, marginBottom: 16, width: '80%', alignItems: 'center' }}
+        style={tw`bg-blue-600 w-full py-3 rounded-xl mb-4`}
         onPress={handleLogin}
       >
-        <Text style={{ color: '#fff', fontSize: 16, fontWeight: 'bold' }}>ĐĂNG NHẬP VỚI MẬT KHẨU</Text>
+        <Text style={tw`text-white text-center text-base font-semibold`}>
+          ĐĂNG NHẬP VỚI MẬT KHẨU
+        </Text>
       </TouchableOpacity>
 
       {/* Quên mật khẩu */}
-      <TouchableOpacity onPress={() => console.log('Quên mật khẩu?')}>
-        <Text style={{ color: '#3B82F6', fontSize: 16, fontWeight: '500' }}>Quên mật khẩu?</Text>
+      <TouchableOpacity onPress={() => navigation.navigate("ForgotPassword")}>
+        <Text style={tw`text-blue-600 font-medium mb-8`}>
+          Quên mật khẩu?
+        </Text>
       </TouchableOpacity>
 
       {/* Đăng ký */}
-      <View style={{ flexDirection: 'row', alignItems: 'center', marginTop: 50 }}>
-        <Text style={{ fontSize: 16, color: '#000' }}>Chưa có tài khoản? </Text>
-        <TouchableOpacity onPress={() => navigation.navigate('SignUp')}>
-          <Text style={{ fontSize: 16, color: '#3B82F6', fontWeight: 'bold' }}>Đăng Ký</Text>
+      <View style={tw`flex-row items-center`}>
+        <Text style={tw`text-base`}>Chưa có tài khoản?</Text>
+        <TouchableOpacity onPress={() => navigation.navigate("SignUp")}>
+          <Text style={tw`text-blue-600 font-semibold ml-2`}>Đăng ký</Text>
         </TouchableOpacity>
       </View>
     </View>
