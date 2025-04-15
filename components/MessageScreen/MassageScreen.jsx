@@ -1,4 +1,5 @@
-import React, { useState, useEffect } from 'react';
+// MessageListScreen.jsx
+import React, { useState, useEffect, useCallback } from 'react';
 import {
   View, Text, TextInput, FlatList, TouchableOpacity, Image, Alert,
 } from 'react-native';
@@ -7,11 +8,13 @@ import AsyncStorage from '@react-native-async-storage/async-storage';
 import tw from 'twrnc';
 import NavigationBar from '../MessageScreen/NavigationBar';
 import useTabNavigation from '../../hooks/useTabNavigation';
-import { useNavigation } from '@react-navigation/native';
+import { useNavigation, useFocusEffect } from '@react-navigation/native';
 import axios from 'axios';
 import { jwtDecode } from 'jwt-decode';
+import { io } from 'socket.io-client';
 
 const API_URL = 'http://192.168.1.6:5000';
+const socket = io(API_URL, { transports: ['websocket'] });
 
 const MessageListScreen = () => {
   const [searchText, setSearchText] = useState('');
@@ -25,28 +28,74 @@ const MessageListScreen = () => {
   const handleTabPress = useTabNavigation();
 
   useEffect(() => {
-    const fetchTokenAndChats = async () => {
-      try {
-        const storedToken = await AsyncStorage.getItem('token');
-        if (storedToken) {
-          setToken(storedToken);
-          const decoded = jwtDecode(storedToken);
-          setCurrentUserId(decoded.id);
-
-          const res = await axios.get(`${API_URL}/api/chat`, {
-            headers: { Authorization: `Bearer ${storedToken}` },
-          });
-          setChats(res.data);
-        } else {
-          Alert.alert('Lỗi', 'Không tìm thấy token');
-        }
-      } catch (err) {
-        console.error('❌ Lỗi lấy danh sách chat:', err);
+    const fetchToken = async () => {
+      const storedToken = await AsyncStorage.getItem('token');
+      if (storedToken) {
+        setToken(storedToken);
+        const decoded = jwtDecode(storedToken);
+        setCurrentUserId(decoded.id);
+        socket.emit('joinGlobalChatList', decoded.id);
       }
     };
-
-    fetchTokenAndChats();
+    fetchToken();
   }, []);
+
+  const fetchChats = useCallback(async () => {
+    try {
+      const res = await axios.get(`${API_URL}/api/chat`, {
+        headers: { Authorization: `Bearer ${token}` },
+      });
+      const sortedChats = res.data.sort((a, b) => {
+        const dateA = new Date(a.latestMessage?.createdAt || a.updatedAt);
+        const dateB = new Date(b.latestMessage?.createdAt || b.updatedAt);
+        return dateB - dateA;
+      });
+      setChats(sortedChats);
+    } catch (err) {
+      console.error('❌ Lỗi lấy danh sách chat:', err);
+    }
+  }, [token]);
+
+  useFocusEffect(
+    useCallback(() => {
+      if (token) fetchChats();
+    }, [token, fetchChats])
+  );
+
+  useEffect(() => {
+    if (!token || !currentUserId) return;
+
+    socket.on('newMessage', (newMsg) => {
+      const chatData = newMsg.chat;
+      setChats((prevChats) => {
+        const existingIndex = prevChats.findIndex((chat) => chat._id === chatData._id);
+
+        const updatedChat = {
+          ...chatData,
+          latestMessage: {
+            content: newMsg.isRecalled ? '[Đã thu hồi]' : newMsg.content,
+            createdAt: newMsg.createdAt,
+            isRecalled: newMsg.isRecalled,
+          },
+        };
+
+        if (existingIndex !== -1) {
+          const newList = [
+            updatedChat,
+            ...prevChats.slice(0, existingIndex),
+            ...prevChats.slice(existingIndex + 1),
+          ];
+          return newList;
+        } else {
+          return [updatedChat, ...prevChats];
+        }
+      });
+    });
+
+    return () => {
+      socket.off('newMessage');
+    };
+  }, [token, currentUserId]);
 
   const handleSearch = async () => {
     if (!searchText.trim()) return;
@@ -67,6 +116,8 @@ const MessageListScreen = () => {
         headers: { Authorization: `Bearer ${token}` },
       });
       if (res.data._id) {
+        await fetchChats();
+        setSearchResults([]);
         navigation.navigate('ChatScreen', {
           chatId: res.data._id,
         });
@@ -100,7 +151,9 @@ const MessageListScreen = () => {
             </Text>
           </View>
           <Text style={tw`text-gray-600`} numberOfLines={1}>
-            {item.latestMessage?.content || '[Tệp đính kèm]'}
+            {item.latestMessage?.isRecalled
+              ? '[Đã thu hồi]'
+              : item.latestMessage?.content || '[Tệp đính kèm]'}
           </Text>
         </View>
       </TouchableOpacity>

@@ -1,14 +1,7 @@
 import React, { useEffect, useState, useRef, memo } from 'react';
 import {
-  View,
-  Text,
-  TextInput,
-  TouchableOpacity,
-  FlatList,
-  Alert,
-  KeyboardAvoidingView,
-  Platform,
-  Image,
+  View, Text, TextInput, TouchableOpacity, FlatList, Alert,
+  KeyboardAvoidingView, Platform, Image,
 } from 'react-native';
 import { jwtDecode } from 'jwt-decode';
 import { io } from 'socket.io-client';
@@ -41,6 +34,7 @@ const ChatMessage = memo(({ item, isSender, onRecall, onDelete, onEdit, onDownlo
         </Text>
       )}
     </View>
+
     {isSender && !item.isRecalled && (
       <View style={tw`flex-row self-end mt-1`}>
         <TouchableOpacity onPress={() => onRecall(item._id)}>
@@ -57,33 +51,28 @@ const ChatMessage = memo(({ item, isSender, onRecall, onDelete, onEdit, onDownlo
   </View>
 ));
 
-
 const ChatScreen = ({ route }) => {
   const { chatId } = route.params;
   const [messages, setMessages] = useState([]);
   const [text, setText] = useState('');
   const [token, setToken] = useState('');
   const [currentUserId, setCurrentUserId] = useState('');
-  const flatListRef = useRef();
   const [editingMessageId, setEditingMessageId] = useState(null);
-  const [editingText, setEditingText] = useState('');
+  const flatListRef = useRef();
+
   const scrollToBottom = () => {
     flatListRef.current?.scrollToEnd({ animated: true });
   };
 
   useEffect(() => {
     const loadToken = async () => {
-      try {
-        const storedToken = await AsyncStorage.getItem('token');
-        if (storedToken) {
-          setToken(storedToken);
-          const decoded = jwtDecode(storedToken);
-          setCurrentUserId(decoded.id);
-        } else {
-          Alert.alert('Lỗi', 'Không tìm thấy token');
-        }
-      } catch (err) {
-        console.error('❌ Lỗi lấy token:', err);
+      const storedToken = await AsyncStorage.getItem('token');
+      if (storedToken) {
+        setToken(storedToken);
+        const decoded = jwtDecode(storedToken);
+        setCurrentUserId(decoded.id);
+      } else {
+        Alert.alert('Lỗi', 'Không tìm thấy token');
       }
     };
     loadToken();
@@ -99,55 +88,49 @@ const ChatScreen = ({ route }) => {
       console.error('Lỗi tải tin nhắn:', err);
     }
   };
-  const editMessage = async () => {
-    if (!editingText.trim() || !editingMessageId) return;
-    try {
-      const res = await axios.put(
-        `${API_URL}/api/message/edit/${editingMessageId}`,
-        { content: editingText },
-        { headers: { Authorization: `Bearer ${token}` } }
-      );
-      const updated = res.data;
-
-      setMessages((prev) =>
-        prev.map((msg) =>
-          msg._id === editingMessageId ? { ...msg, content: editingText, isEdited: true } : msg
-        )
-      );
-
-      socket.emit('messageEdited', updated);
-      setEditingMessageId(null);
-      setEditingText('');
-    } catch (err) {
-      Alert.alert('Lỗi', err.response?.data?.message || 'Không thể sửa tin nhắn');
-    }
-  };
 
   const sendMessage = async () => {
     if (!text.trim()) return;
 
+    // Nếu đang chỉnh sửa
+    if (editingMessageId) {
+      try {
+        const res = await axios.put(`${API_URL}/api/message/edit/${editingMessageId}`, {
+          content: text,
+        }, {
+          headers: { Authorization: `Bearer ${token}` }
+        });
+
+        const updated = res.data;
+        setMessages((prev) =>
+          prev.map((m) =>
+            m._id === editingMessageId ? { ...m, content: updated.content, isEdited: true } : m
+          )
+        );
+        socket.emit('messageEdited', updated);
+        setEditingMessageId(null);
+        setText('');
+      } catch (err) {
+        Alert.alert('Lỗi', 'Không thể chỉnh sửa');
+      }
+      return;
+    }
+
+    // Gửi tin nhắn mới
     try {
       const res = await axios.post(`${API_URL}/api/message`, {
-        chatId,
-        content: text,
-        type: 'text',
-      }, {
-        headers: { Authorization: `Bearer ${token}` },
-      });
-
+        chatId, content: text, type: 'text',
+      }, { headers: { Authorization: `Bearer ${token}` } });
       const newMsg = res.data;
       setMessages((prev) => [...prev, newMsg]);
       socket.emit('newMessage', newMsg);
       setText('');
     } catch (err) {
-      console.error('❌ Lỗi gửi tin nhắn:', err);
       Alert.alert('Lỗi', 'Không thể gửi tin nhắn');
     }
   };
 
   const sendMessageWithFile = async (file) => {
-    if (!file || !chatId || !token) return;
-
     const formData = new FormData();
     formData.append('chatId', chatId);
     formData.append('file', {
@@ -155,7 +138,6 @@ const ChatScreen = ({ route }) => {
       name: file.name,
       type: file.type || 'application/octet-stream',
     });
-
     const type = file.type.startsWith('image/') ? 'image' : 'file';
     formData.append('type', type);
 
@@ -166,12 +148,10 @@ const ChatScreen = ({ route }) => {
           'Content-Type': 'multipart/form-data',
         },
       });
-
       const newMsg = res.data;
       setMessages((prev) => [...prev, newMsg]);
       socket.emit('newMessage', newMsg);
     } catch (err) {
-      console.error('❌ Lỗi gửi file:', err);
       Alert.alert('Lỗi', 'Không thể gửi file');
     }
   };
@@ -182,15 +162,13 @@ const ChatScreen = ({ route }) => {
       allowsEditing: true,
       quality: 0.7,
     });
-
     if (!result.canceled && result.assets.length > 0) {
       const asset = result.assets[0];
       const uri = asset.uri;
       const name = uri.split('/').pop();
       const ext = name.split('.').pop();
       const type = `image/${ext}`;
-      const file = { uri, name, type };
-      sendMessageWithFile(file);
+      sendMessageWithFile({ uri, name, type });
     }
   };
 
@@ -198,37 +176,36 @@ const ChatScreen = ({ route }) => {
     const result = await DocumentPicker.getDocumentAsync({});
     if (!result.canceled && result.assets?.length > 0) {
       const asset = result.assets[0];
-      const file = {
+      sendMessageWithFile({
         uri: asset.uri,
         name: asset.name,
         type: asset.mimeType || 'application/octet-stream',
-      };
-      sendMessageWithFile(file);
+      });
     }
   };
-  const recallMessage = async (messageId) => {
-    try {
-      await axios.put(`${API_URL}/api/message/recall/${messageId}`, {}, {
-        headers: { Authorization: `Bearer ${token}` }
-      });
 
+  const recallMessage = async (id) => {
+    try {
+      await axios.put(`${API_URL}/api/message/recall/${id}`, {}, {
+        headers: { Authorization: `Bearer ${token}` },
+      });
       setMessages((prev) =>
-        prev.map((msg) => (msg._id === messageId ? { ...msg, isRecalled: true } : msg))
+        prev.map((msg) => (msg._id === id ? { ...msg, isRecalled: true } : msg))
       );
-      socket.emit('messageRecalled', { _id: messageId });
+      socket.emit('messageRecalled', { _id: id });
     } catch (err) {
-      Alert.alert('Lỗi', err.response?.data?.message || 'Không thể thu hồi tin nhắn');
+      Alert.alert('Lỗi', 'Không thể thu hồi tin nhắn');
     }
   };
-  const deleteMessageForMe = async (messageId) => {
-    try {
-      await axios.put(`${API_URL}/api/message/delete-for-me/${messageId}`, {}, {
-        headers: { Authorization: `Bearer ${token}` }
-      });
 
-      setMessages((prev) => prev.filter((msg) => msg._id !== messageId));
+  const deleteMessageForMe = async (id) => {
+    try {
+      await axios.put(`${API_URL}/api/message/delete-for-me/${id}`, {}, {
+        headers: { Authorization: `Bearer ${token}` },
+      });
+      setMessages((prev) => prev.filter((msg) => msg._id !== id));
     } catch (err) {
-      Alert.alert('Lỗi', err.response?.data?.message || 'Không thể xóa tin nhắn');
+      Alert.alert('Lỗi', 'Không thể xóa tin nhắn');
     }
   };
 
@@ -247,21 +224,30 @@ const ChatScreen = ({ route }) => {
     if (!token) return;
     socket.emit('joinChat', chatId);
     fetchMessages();
-    socket.on('messageReceived', (message) => {
-      setMessages((prev) => {
-        const exists = prev.some((msg) => msg._id === message._id);
-        return exists ? prev : [...prev, message];
-      });
+
+    socket.on('messageReceived', (msg) => {
+      setMessages((prev) => prev.some((m) => m._id === msg._id) ? prev : [...prev, msg]);
       scrollToBottom();
     });
+
     socket.on('messageRecalled', (updatedMsg) => {
       setMessages((prev) =>
         prev.map((msg) => (msg._id === updatedMsg._id ? { ...msg, isRecalled: true } : msg))
       );
     });
+
+    socket.on('messageEdited', (updatedMsg) => {
+      setMessages((prev) =>
+        prev.map((msg) =>
+          msg._id === updatedMsg._id ? { ...msg, content: updatedMsg.content, isEdited: true } : msg
+        )
+      );
+    });
+
     return () => {
       socket.off('messageReceived');
       socket.off('messageRecalled');
+      socket.off('messageEdited');
     };
   }, [token]);
 
@@ -291,11 +277,11 @@ const ChatScreen = ({ route }) => {
           <ChatMessage
             item={item}
             isSender={item.sender?._id === currentUserId}
-            onRecall={() => recallMessage(item._id)}
-            onDelete={() => deleteMessageForMe(item._id)}
+            onRecall={recallMessage}
+            onDelete={deleteMessageForMe}
             onEdit={(msg) => {
               setEditingMessageId(msg._id);
-              setEditingText(msg.content);
+              setText(msg.content);
             }}
             onDownload={downloadFile}
           />
@@ -315,11 +301,16 @@ const ChatScreen = ({ route }) => {
         <TextInput
           value={text}
           onChangeText={setText}
-          placeholder="Nhập tin nhắn"
+          placeholder={editingMessageId ? 'Chỉnh sửa tin nhắn...' : 'Nhập tin nhắn'}
           style={tw`flex-1 bg-gray-100 px-4 py-2 rounded-full text-sm`}
         />
-        <TouchableOpacity onPress={sendMessage} style={tw`ml-2 bg-blue-500 px-4 py-2 rounded-full`}>
-          <Text style={tw`text-white font-semibold`}>Gửi</Text>
+        <TouchableOpacity
+          onPress={sendMessage}
+          style={tw`ml-2 ${editingMessageId ? 'bg-yellow-500' : 'bg-blue-500'} px-4 py-2 rounded-full`}
+        >
+          <Text style={tw`text-white font-semibold`}>
+            {editingMessageId ? 'Lưu chỉnh sửa' : 'Gửi'}
+          </Text>
         </TouchableOpacity>
       </View>
     </KeyboardAvoidingView>
