@@ -14,6 +14,7 @@ import VerifyOtpScreen from './components/LogIn/VerifyOTP';
 import ResetPasswordScreen from './components/LogIn/ResetPasswordScreen';
 import ChangePass from './components/ProfileScreen/ChangePassword';
 import EditProfile from './components/ProfileScreen/EditProfile';
+import ChatSceen from './components/MessageScreen/ChatScreen';
 const Stack = createStackNavigator();
 
 export default function App() {
@@ -28,6 +29,7 @@ export default function App() {
         <Stack.Screen name="ResetPasswordScreen" component={ResetPasswordScreen} />
         <Stack.Screen name="ChangePass" component={ChangePass} />
         <Stack.Screen name="EditProfile" component={EditProfile} />
+        <Stack.Screen name="ChatScreen" component={ChatSceen} />
         <Stack.Screen name="PhoneBook" component={PhoneBook} />
         <Stack.Screen name="ExploreScreen" component={ExploreScreen} />
         <Stack.Screen name="NewScreen" component={NewScreen} />

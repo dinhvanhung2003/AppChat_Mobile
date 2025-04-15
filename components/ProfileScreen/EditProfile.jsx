@@ -5,7 +5,7 @@ import tw from "twrnc";
 import AsyncStorage from '@react-native-async-storage/async-storage';
 
 
-const API_URL = "http://192.168.1.6:5000";
+const API_URL = "http://192.168.1.9:5000";
 
 const EditProfileScreen = ({ route, navigation }) => {
   const { user } = route.params;

@@ -8,9 +8,7 @@ import {
 } from "react-native";
 import AsyncStorage from "@react-native-async-storage/async-storage";
 import tw from "twrnc";
-
-const API_URL = "http://192.168.1.6:5000";
-
+const API_URL = 'http://192.168.1.12:5000'; 
 const LoginScreen = ({ navigation }) => {
   const [email, setEmail] = useState("");
   const [password, setPassword] = useState("");
@@ -21,26 +19,44 @@ const LoginScreen = ({ navigation }) => {
       Alert.alert("Lỗi", "Vui lòng nhập email và mật khẩu!");
       return;
     }
-
+  
+    const emailRegex = /^[^\s@]+@[^\s@]+\.[^\s@]+$/;
+    const passwordRegex = /^.{8,}$/;
+  
+    if (!emailRegex.test(email)) {
+      Alert.alert("Lỗi", "Email không hợp lệ!");
+      return;
+    }
+  
+    if (!passwordRegex.test(password)) {
+      Alert.alert("Lỗi", "Mật khẩu phải có ít nhất 8 ký tự!");
+      return;
+    }
+  
     try {
       const response = await fetch(`${API_URL}/users/signin`, {
         method: "POST",
         headers: { "Content-Type": "application/json" },
         body: JSON.stringify({ email, password }),
       });
-
+  
       const data = await response.json();
-
+  
       if (response.ok) {
+        // Lưu token và user riêng biệt
+        await AsyncStorage.setItem("token", data.token);
         await AsyncStorage.setItem("user", JSON.stringify(data));
-        navigation.navigate("ProfileScreen", { user: data });
-      } else {
+      
+        // Điều hướng không cần truyền token nữa
+        navigation.navigate("MessageScreen");
+      }else {
         Alert.alert("Lỗi", data.error || "Đăng nhập thất bại!");
       }
     } catch (error) {
       Alert.alert("Lỗi kết nối", error.message);
     }
   };
+  
 
   return (
     <View style={tw`flex-1 bg-white justify-center items-center px-6`}>

@@ -35,7 +35,7 @@ const ProfileScreen = ({ route }) => {
 
   const MenuItem = ({ icon, text, onPress }) => (
     <TouchableOpacity
-      style={tw`flex-row items-center px-5 py-4 bg-white border-b border-gray-200`}
+      style={tw`flex-row items-center px-5 py-4 bg-white border-b border-gray-200 `}
       onPress={onPress}
     >
       <MaterialIcons name={icon} size={24} color="#3B82F6" />
