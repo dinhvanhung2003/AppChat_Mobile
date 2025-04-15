@@ -9,6 +9,7 @@ import NavigationBar from '../MessageScreen/NavigationBar';
 import useTabNavigation from '../../hooks/useTabNavigation';
 import { useNavigation } from '@react-navigation/native';
 import axios from 'axios';
+import { jwtDecode } from 'jwt-decode';
 
 const API_URL = 'http://192.168.1.6:5000';
 
@@ -18,6 +19,7 @@ const MessageListScreen = () => {
   const [token, setToken] = useState('');
   const [searchResults, setSearchResults] = useState([]);
   const [chats, setChats] = useState([]);
+  const [currentUserId, setCurrentUserId] = useState('');
 
   const navigation = useNavigation();
   const handleTabPress = useTabNavigation();
@@ -28,6 +30,9 @@ const MessageListScreen = () => {
         const storedToken = await AsyncStorage.getItem('token');
         if (storedToken) {
           setToken(storedToken);
+          const decoded = jwtDecode(storedToken);
+          setCurrentUserId(decoded.id);
+
           const res = await axios.get(`${API_URL}/api/chat`, {
             headers: { Authorization: `Bearer ${storedToken}` },
           });
@@ -49,7 +54,6 @@ const MessageListScreen = () => {
       const res = await axios.get(`${API_URL}/users?search=${searchText}`, {
         headers: { Authorization: `Bearer ${token}` },
       });
-      console.log('Kết quả tìm kiếm:', res.data);
       setSearchResults(res.data.users || res.data || []);
     } catch (error) {
       console.error('❌ Lỗi tìm kiếm:', error.response?.data || error.message);
@@ -74,10 +78,9 @@ const MessageListScreen = () => {
       Alert.alert('Lỗi', 'Không thể bắt đầu cuộc trò chuyện.');
     }
   };
-  
 
   const renderItem = ({ item }) => {
-    const otherUser = item.users?.find((u) => !u.email?.includes('@admin'));
+    const otherUser = item.users?.find((u) => u._id !== currentUserId);
     return (
       <TouchableOpacity
         style={tw`flex-row items-center p-3 border-b border-gray-200`}
