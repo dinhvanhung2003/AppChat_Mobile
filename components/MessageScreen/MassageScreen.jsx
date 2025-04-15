@@ -64,12 +64,12 @@ const MessageListScreen = () => {
 
   useEffect(() => {
     if (!token || !currentUserId) return;
-
-    socket.on('newMessage', (newMsg) => {
+  
+    socket.on('messageReceived', (newMsg) => {
       const chatData = newMsg.chat;
       setChats((prevChats) => {
         const existingIndex = prevChats.findIndex((chat) => chat._id === chatData._id);
-
+  
         const updatedChat = {
           ...chatData,
           latestMessage: {
@@ -78,7 +78,7 @@ const MessageListScreen = () => {
             isRecalled: newMsg.isRecalled,
           },
         };
-
+  
         if (existingIndex !== -1) {
           const newList = [
             updatedChat,
@@ -91,11 +91,12 @@ const MessageListScreen = () => {
         }
       });
     });
-
+  
     return () => {
-      socket.off('newMessage');
+      socket.off('messageReceived');
     };
   }, [token, currentUserId]);
+  
 
   const handleSearch = async () => {
     if (!searchText.trim()) return;

@@ -1,4 +1,3 @@
-// ChatScreen.jsx
 import React, { useEffect, useState, useRef, memo } from 'react';
 import {
   View, Text, TextInput, TouchableOpacity, FlatList, Alert,
@@ -93,7 +92,6 @@ const ChatScreen = ({ route }) => {
   const sendMessage = async () => {
     if (!text.trim()) return;
 
-    // Nếu đang chỉnh sửa tin nhắn
     if (editingMessageId) {
       try {
         const res = await axios.put(`${API_URL}/api/message/edit/${editingMessageId}`, {
@@ -116,15 +114,10 @@ const ChatScreen = ({ route }) => {
       return;
     }
 
-    // Gửi tin nhắn mới
     try {
       const res = await axios.post(`${API_URL}/api/message`, {
         chatId, content: text, type: 'text',
       }, { headers: { Authorization: `Bearer ${token}` } });
-      const newMsg = res.data;
-      setMessages((prev) => [...prev, newMsg]);
-      // Sửa sự kiện: lắng nghe 'newMessage'
-      socket.emit('newMessage', newMsg);
       setText('');
     } catch (err) {
       Alert.alert('Lỗi', 'Không thể gửi tin nhắn');
@@ -143,15 +136,12 @@ const ChatScreen = ({ route }) => {
     formData.append('type', type);
 
     try {
-      const res = await axios.post(`${API_URL}/api/message`, formData, {
+      await axios.post(`${API_URL}/api/message`, formData, {
         headers: {
           Authorization: `Bearer ${token}`,
           'Content-Type': 'multipart/form-data',
         },
       });
-      const newMsg = res.data;
-      setMessages((prev) => [...prev, newMsg]);
-      socket.emit('newMessage', newMsg);
     } catch (err) {
       Alert.alert('Lỗi', 'Không thể gửi file');
     }
@@ -226,10 +216,9 @@ const ChatScreen = ({ route }) => {
     socket.emit('joinChat', chatId);
     fetchMessages();
 
-    // Lắng nghe sự kiện "newMessage" từ server
-    socket.on('newMessage', (msg) => {
+    // ⚠️ Đổi từ 'newMessage' sang 'messageReceived'
+    socket.on('messageReceived', (msg) => {
       setMessages((prev) => prev.some((m) => m._id === msg._id) ? prev : [...prev, msg]);
-      // Sau khi cập nhật state, FlatList sẽ tự re-render
       scrollToBottom();
     });
 
@@ -248,7 +237,7 @@ const ChatScreen = ({ route }) => {
     });
 
     return () => {
-      socket.off('newMessage');
+      socket.off('messageReceived');
       socket.off('messageRecalled');
       socket.off('messageEdited');
     };
