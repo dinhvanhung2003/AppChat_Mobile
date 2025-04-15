@@ -24,7 +24,7 @@ import AsyncStorage from '@react-native-async-storage/async-storage';
 const API_URL = 'http://192.168.1.6:5000';
 const socket = io(API_URL, { transports: ['websocket'] });
 
-const ChatMessage = memo(({ item, isSender, onRecall, onDelete, onDownload }) => (
+const ChatMessage = memo(({ item, isSender, onRecall, onDelete, onEdit, onDownload }) => (
   <View style={tw`mb-2 px-2`}>
     <View style={tw`max-w-[75%] px-3 py-2 rounded-xl ${isSender ? 'bg-blue-500 self-end' : 'bg-gray-200 self-start'}`}>
       {item.isRecalled ? (
@@ -36,13 +36,18 @@ const ChatMessage = memo(({ item, isSender, onRecall, onDelete, onDownload }) =>
           <Text style={tw`${isSender ? 'text-white' : 'text-black'}`}>📎 {item.fileName}</Text>
         </TouchableOpacity>
       ) : (
-        <Text style={tw`${isSender ? 'text-white' : 'text-black'}`}>{item.content}</Text>
+        <Text style={tw`${isSender ? 'text-white' : 'text-black'}`}>
+          {item.content} {item.isEdited && '(đã chỉnh sửa)'}
+        </Text>
       )}
     </View>
     {isSender && !item.isRecalled && (
       <View style={tw`flex-row self-end mt-1`}>
         <TouchableOpacity onPress={() => onRecall(item._id)}>
           <Text style={tw`text-xs text-blue-200 mr-2`}>Thu hồi</Text>
+        </TouchableOpacity>
+        <TouchableOpacity onPress={() => onEdit(item)}>
+          <Text style={tw`text-xs text-yellow-200 mr-2`}>Sửa</Text>
         </TouchableOpacity>
         <TouchableOpacity onPress={() => onDelete(item._id)}>
           <Text style={tw`text-xs text-red-300`}>Xóa</Text>
@@ -52,6 +57,7 @@ const ChatMessage = memo(({ item, isSender, onRecall, onDelete, onDownload }) =>
   </View>
 ));
 
+
 const ChatScreen = ({ route }) => {
   const { chatId } = route.params;
   const [messages, setMessages] = useState([]);
@@ -59,7 +65,8 @@ const ChatScreen = ({ route }) => {
   const [token, setToken] = useState('');
   const [currentUserId, setCurrentUserId] = useState('');
   const flatListRef = useRef();
-
+  const [editingMessageId, setEditingMessageId] = useState(null);
+  const [editingText, setEditingText] = useState('');
   const scrollToBottom = () => {
     flatListRef.current?.scrollToEnd({ animated: true });
   };
@@ -90,6 +97,29 @@ const ChatScreen = ({ route }) => {
       setMessages(res.data);
     } catch (err) {
       console.error('Lỗi tải tin nhắn:', err);
+    }
+  };
+  const editMessage = async () => {
+    if (!editingText.trim() || !editingMessageId) return;
+    try {
+      const res = await axios.put(
+        `${API_URL}/api/message/edit/${editingMessageId}`,
+        { content: editingText },
+        { headers: { Authorization: `Bearer ${token}` } }
+      );
+      const updated = res.data;
+
+      setMessages((prev) =>
+        prev.map((msg) =>
+          msg._id === editingMessageId ? { ...msg, content: editingText, isEdited: true } : msg
+        )
+      );
+
+      socket.emit('messageEdited', updated);
+      setEditingMessageId(null);
+      setEditingText('');
+    } catch (err) {
+      Alert.alert('Lỗi', err.response?.data?.message || 'Không thể sửa tin nhắn');
     }
   };
 
@@ -176,6 +206,31 @@ const ChatScreen = ({ route }) => {
       sendMessageWithFile(file);
     }
   };
+  const recallMessage = async (messageId) => {
+    try {
+      await axios.put(`${API_URL}/api/message/recall/${messageId}`, {}, {
+        headers: { Authorization: `Bearer ${token}` }
+      });
+
+      setMessages((prev) =>
+        prev.map((msg) => (msg._id === messageId ? { ...msg, isRecalled: true } : msg))
+      );
+      socket.emit('messageRecalled', { _id: messageId });
+    } catch (err) {
+      Alert.alert('Lỗi', err.response?.data?.message || 'Không thể thu hồi tin nhắn');
+    }
+  };
+  const deleteMessageForMe = async (messageId) => {
+    try {
+      await axios.put(`${API_URL}/api/message/delete-for-me/${messageId}`, {}, {
+        headers: { Authorization: `Bearer ${token}` }
+      });
+
+      setMessages((prev) => prev.filter((msg) => msg._id !== messageId));
+    } catch (err) {
+      Alert.alert('Lỗi', err.response?.data?.message || 'Không thể xóa tin nhắn');
+    }
+  };
 
   const downloadFile = async (url, fileName = 'file.xyz') => {
     try {
@@ -236,8 +291,12 @@ const ChatScreen = ({ route }) => {
           <ChatMessage
             item={item}
             isSender={item.sender?._id === currentUserId}
-            onRecall={() => {}}
-            onDelete={() => {}}
+            onRecall={() => recallMessage(item._id)}
+            onDelete={() => deleteMessageForMe(item._id)}
+            onEdit={(msg) => {
+              setEditingMessageId(msg._id);
+              setEditingText(msg.content);
+            }}
             onDownload={downloadFile}
           />
         )}
