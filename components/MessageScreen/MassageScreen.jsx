@@ -49,9 +49,10 @@ const MessageListScreen = () => {
       const res = await axios.get(`${API_URL}/users?search=${searchText}`, {
         headers: { Authorization: `Bearer ${token}` },
       });
-      setSearchResults(res.data.users || []);
+      console.log('Kết quả tìm kiếm:', res.data);
+      setSearchResults(res.data.users || res.data || []);
     } catch (error) {
-      console.error('❌ Lỗi tìm kiếm:', error);
+      console.error('❌ Lỗi tìm kiếm:', error.response?.data || error.message);
       Alert.alert('Lỗi', 'Không thể tìm kiếm người dùng.');
     }
   };
@@ -71,7 +72,7 @@ const MessageListScreen = () => {
   };
 
   const renderItem = ({ item }) => {
-    const otherUser = item.users?.find((u) => !u.email?.includes('@admin')); // Hoặc lọc theo điều kiện khác nếu cần
+    const otherUser = item.users?.find((u) => !u.email?.includes('@admin'));
     return (
       <TouchableOpacity
         style={tw`flex-row items-center p-3 border-b border-gray-200`}
@@ -116,7 +117,6 @@ const MessageListScreen = () => {
 
   return (
     <View style={tw`flex-1 bg-white mt-10`}>
-      {/* Thanh tìm kiếm */}
       <View style={tw`flex-row items-center p-3 bg-blue-500`}>
         <TouchableOpacity onPress={handleSearch}>
           <Ionicons name="search" size={20} color="white" style={tw`mr-2`} />
@@ -137,7 +137,6 @@ const MessageListScreen = () => {
         </TouchableOpacity>
       </View>
 
-      {/* Tabs */}
       <View style={tw`flex-row border-b`}>
         <TouchableOpacity
           onPress={() => setActiveTab('Ưu tiên')}
@@ -157,7 +156,6 @@ const MessageListScreen = () => {
         </TouchableOpacity>
       </View>
 
-      {/* Danh sách đoạn chat hoặc kết quả tìm kiếm */}
       <FlatList
         data={searchResults.length > 0 ? searchResults : chats}
         keyExtractor={(item) => item._id || item.id}
