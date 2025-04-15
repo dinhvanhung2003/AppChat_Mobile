@@ -10,7 +10,7 @@ import useTabNavigation from '../../hooks/useTabNavigation';
 import { useNavigation } from '@react-navigation/native';
 import axios from 'axios';
 
-const API_URL = 'http://192.168.1.33:5000';
+const API_URL = 'http://192.168.1.6:5000';
 
 const MessageListScreen = () => {
   const [searchText, setSearchText] = useState('');
@@ -62,14 +62,19 @@ const MessageListScreen = () => {
       const res = await axios.post(`${API_URL}/api/chat`, { userId }, {
         headers: { Authorization: `Bearer ${token}` },
       });
-      navigation.navigate('ChatScreen', {
-        chatId: res.data._id,
-      });
+      if (res.data._id) {
+        navigation.navigate('ChatScreen', {
+          chatId: res.data._id,
+        });
+      } else {
+        Alert.alert('Lỗi', 'Không thể tạo hoặc truy cập cuộc trò chuyện.');
+      }
     } catch (error) {
-      console.error('❌ Lỗi tạo cuộc trò chuyện:', error);
+      console.error('❌ Lỗi tạo cuộc trò chuyện:', error.response?.data || error.message);
       Alert.alert('Lỗi', 'Không thể bắt đầu cuộc trò chuyện.');
     }
   };
+  
 
   const renderItem = ({ item }) => {
     const otherUser = item.users?.find((u) => !u.email?.includes('@admin'));

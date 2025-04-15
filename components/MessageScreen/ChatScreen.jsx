@@ -21,7 +21,7 @@ import * as FileSystem from 'expo-file-system';
 import * as Sharing from 'expo-sharing';
 import AsyncStorage from '@react-native-async-storage/async-storage';
 
-const API_URL = 'http://192.168.1.33:5000';
+const API_URL = 'http://192.168.1.6:5000';
 const socket = io(API_URL, { transports: ['websocket'] });
 
 const ChatMessage = memo(({ item, isSender, onRecall, onDelete, onDownload }) => (
@@ -93,9 +93,31 @@ const ChatScreen = ({ route }) => {
     }
   };
 
+  const sendMessage = async () => {
+    if (!text.trim()) return;
+
+    try {
+      const res = await axios.post(`${API_URL}/api/message`, {
+        chatId,
+        content: text,
+        type: 'text',
+      }, {
+        headers: { Authorization: `Bearer ${token}` },
+      });
+
+      const newMsg = res.data;
+      setMessages((prev) => [...prev, newMsg]);
+      socket.emit('newMessage', newMsg);
+      setText('');
+    } catch (err) {
+      console.error('❌ Lỗi gửi tin nhắn:', err);
+      Alert.alert('Lỗi', 'Không thể gửi tin nhắn');
+    }
+  };
+
   const sendMessageWithFile = async (file) => {
     if (!file || !chatId || !token) return;
-  
+
     const formData = new FormData();
     formData.append('chatId', chatId);
     formData.append('file', {
@@ -103,10 +125,10 @@ const ChatScreen = ({ route }) => {
       name: file.name,
       type: file.type || 'application/octet-stream',
     });
-  
+
     const type = file.type.startsWith('image/') ? 'image' : 'file';
     formData.append('type', type);
-  
+
     try {
       const res = await axios.post(`${API_URL}/api/message`, formData, {
         headers: {
@@ -114,18 +136,15 @@ const ChatScreen = ({ route }) => {
           'Content-Type': 'multipart/form-data',
         },
       });
-  
+
       const newMsg = res.data;
       setMessages((prev) => [...prev, newMsg]);
       socket.emit('newMessage', newMsg);
-      setSelectedFile(null);
-      setText('');
     } catch (err) {
-      console.error('❌ Lỗi gửi file:', err.response?.data || err.message);
+      console.error('❌ Lỗi gửi file:', err);
       Alert.alert('Lỗi', 'Không thể gửi file');
     }
   };
-  
 
   const pickImage = async () => {
     const result = await ImagePicker.launchImageLibraryAsync({
@@ -133,7 +152,7 @@ const ChatScreen = ({ route }) => {
       allowsEditing: true,
       quality: 0.7,
     });
-  
+
     if (!result.canceled && result.assets.length > 0) {
       const asset = result.assets[0];
       const uri = asset.uri;
@@ -144,7 +163,6 @@ const ChatScreen = ({ route }) => {
       sendMessageWithFile(file);
     }
   };
-  
 
   const pickDocument = async () => {
     const result = await DocumentPicker.getDocumentAsync({});
@@ -158,7 +176,6 @@ const ChatScreen = ({ route }) => {
       sendMessageWithFile(file);
     }
   };
-  
 
   const downloadFile = async (url, fileName = 'file.xyz') => {
     try {
@@ -242,7 +259,7 @@ const ChatScreen = ({ route }) => {
           placeholder="Nhập tin nhắn"
           style={tw`flex-1 bg-gray-100 px-4 py-2 rounded-full text-sm`}
         />
-        <TouchableOpacity onPress={() => sendMessageWithFile({ content: text })} style={tw`ml-2 bg-blue-500 px-4 py-2 rounded-full`}>
+        <TouchableOpacity onPress={sendMessage} style={tw`ml-2 bg-blue-500 px-4 py-2 rounded-full`}>
           <Text style={tw`text-white font-semibold`}>Gửi</Text>
         </TouchableOpacity>
       </View>
