@@ -11,7 +11,6 @@ import {
   Image,
 } from 'react-native';
 import { jwtDecode } from 'jwt-decode';
-import AsyncStorage from '@react-native-async-storage/async-storage';
 import { io } from 'socket.io-client';
 import axios from 'axios';
 import tw from 'twrnc';
@@ -19,17 +18,15 @@ import { Ionicons, MaterialIcons } from '@expo/vector-icons';
 import * as ImagePicker from 'expo-image-picker';
 import * as DocumentPicker from 'expo-document-picker';
 import * as FileSystem from 'expo-file-system';
-import * as WebBrowser from 'expo-web-browser';
+import * as Sharing from 'expo-sharing';
+import AsyncStorage from '@react-native-async-storage/async-storage';
 
-const socket = io('http://172.28.109.213:5000', {
-  transports: ['websocket'],
-});
+const API_URL = 'http://192.168.1.33:5000';
+const socket = io(API_URL, { transports: ['websocket'] });
 
 const ChatMessage = memo(({ item, isSender, onRecall, onDelete, onDownload }) => (
   <View style={tw`mb-2 px-2`}>
-    <View
-      style={tw`max-w-[75%] px-3 py-2 rounded-xl ${isSender ? 'bg-blue-500 self-end' : 'bg-gray-200 self-start'}`}
-    >
+    <View style={tw`max-w-[75%] px-3 py-2 rounded-xl ${isSender ? 'bg-blue-500 self-end' : 'bg-gray-200 self-start'}`}>
       {item.isRecalled ? (
         <Text style={tw`italic text-gray-400`}>[Tin nhắn đã thu hồi]</Text>
       ) : item.type === 'image' && item.fileUrl ? (
@@ -59,7 +56,6 @@ const ChatScreen = ({ route }) => {
   const { chatId } = route.params;
   const [messages, setMessages] = useState([]);
   const [text, setText] = useState('');
-  const [selectedFile, setSelectedFile] = useState(null);
   const [token, setToken] = useState('');
   const [currentUserId, setCurrentUserId] = useState('');
   const flatListRef = useRef();
@@ -68,24 +64,27 @@ const ChatScreen = ({ route }) => {
     flatListRef.current?.scrollToEnd({ animated: true });
   };
 
-  const loadToken = async () => {
-    try {
-      const storedToken = await AsyncStorage.getItem('token');
-      if (storedToken) {
-        setToken(storedToken);
-        const decoded = jwtDecode(storedToken);
-        setCurrentUserId(decoded.id);
-      } else {
-        Alert.alert('Lỗi', 'Không tìm thấy token');
+  useEffect(() => {
+    const loadToken = async () => {
+      try {
+        const storedToken = await AsyncStorage.getItem('token');
+        if (storedToken) {
+          setToken(storedToken);
+          const decoded = jwtDecode(storedToken);
+          setCurrentUserId(decoded.id);
+        } else {
+          Alert.alert('Lỗi', 'Không tìm thấy token');
+        }
+      } catch (err) {
+        console.error('❌ Lỗi lấy token:', err);
       }
-    } catch (err) {
-      console.error('❌ Lỗi khi lấy token:', err);
-    }
-  };
+    };
+    loadToken();
+  }, []);
 
   const fetchMessages = async () => {
     try {
-      const res = await axios.get(`http://172.28.109.213:5000/api/message/${chatId}`, {
+      const res = await axios.get(`${API_URL}/api/message/${chatId}`, {
         headers: { Authorization: `Bearer ${token}` },
       });
       setMessages(res.data);
@@ -94,112 +93,88 @@ const ChatScreen = ({ route }) => {
     }
   };
 
-  const sendMessageWithFormData = async (formData) => {
+  const sendMessageWithFile = async (file) => {
+    if (!file || !chatId || !token) return;
+  
+    const formData = new FormData();
+    formData.append('chatId', chatId);
+    formData.append('file', {
+      uri: file.uri.startsWith('file://') ? file.uri : `file://${file.uri}`,
+      name: file.name,
+      type: file.type || 'application/octet-stream',
+    });
+  
+    const type = file.type.startsWith('image/') ? 'image' : 'file';
+    formData.append('type', type);
+  
     try {
-      const res = await axios.post(`http://172.28.109.213:5000/api/message`, formData, {
+      const res = await axios.post(`${API_URL}/api/message`, formData, {
         headers: {
           Authorization: `Bearer ${token}`,
           'Content-Type': 'multipart/form-data',
         },
       });
+  
       const newMsg = res.data;
       setMessages((prev) => [...prev, newMsg]);
       socket.emit('newMessage', newMsg);
-      setText('');
       setSelectedFile(null);
+      setText('');
     } catch (err) {
-      console.error('❌ Gửi tin nhắn thất bại:', err.response?.data || err.message);
-      Alert.alert('Lỗi', 'Không thể gửi tin nhắn');
+      console.error('❌ Lỗi gửi file:', err.response?.data || err.message);
+      Alert.alert('Lỗi', 'Không thể gửi file');
     }
   };
+  
 
-  const sendMessage = () => {
-    if (!text.trim() && !selectedFile) return;
-
-    const formData = new FormData();
-    formData.append('chatId', chatId);
-    if (text.trim()) formData.append('content', text);
-    if (selectedFile) {
-      const type = selectedFile.type.startsWith('image/') ? 'image' : 'file';
-      formData.append('file', {
-        uri: selectedFile.uri,
-        name: selectedFile.name,
-        type: selectedFile.type,
-      });
-      formData.append('type', type);
-    }
-
-    sendMessageWithFormData(formData);
-  };
-
-  const pickFile = async (picker) => {
-    try {
-      const result = await picker();
-      if (!result.canceled && result.assets?.length > 0) {
-        const asset = result.assets[0];
-        const uri = asset.uri;
-        const name = uri.split('/').pop();
-        const ext = name.split('.').pop();
-        const type = picker === ImagePicker.launchImageLibraryAsync
-          ? `image/${ext}`
-          : asset.mimeType || 'application/octet-stream';
-
-        setSelectedFile({ uri, name, type });
-        setTimeout(() => sendMessage(), 100);
-      }
-    } catch (err) {
-      console.error('❌ File picker error:', err);
-      Alert.alert('Lỗi', 'Không thể chọn file');
+  const pickImage = async () => {
+    const result = await ImagePicker.launchImageLibraryAsync({
+      mediaTypes: ImagePicker.MediaTypeOptions.Images,
+      allowsEditing: true,
+      quality: 0.7,
+    });
+  
+    if (!result.canceled && result.assets.length > 0) {
+      const asset = result.assets[0];
+      const uri = asset.uri;
+      const name = uri.split('/').pop();
+      const ext = name.split('.').pop();
+      const type = `image/${ext}`;
+      const file = { uri, name, type };
+      sendMessageWithFile(file);
     }
   };
+  
 
-  const recallMessage = async (messageId) => {
-    try {
-      await axios.put(`http://172.28.109.213:5000/api/message/recall/${messageId}`, {}, {
-        headers: { Authorization: `Bearer ${token}` },
-      });
-      setMessages((prev) =>
-        prev.map((msg) => (msg._id === messageId ? { ...msg, isRecalled: true } : msg))
-      );
-      socket.emit('recallMessage', { _id: messageId });
-    } catch (err) {
-      console.error('Lỗi thu hồi:', err);
+  const pickDocument = async () => {
+    const result = await DocumentPicker.getDocumentAsync({});
+    if (!result.canceled && result.assets?.length > 0) {
+      const asset = result.assets[0];
+      const file = {
+        uri: asset.uri,
+        name: asset.name,
+        type: asset.mimeType || 'application/octet-stream',
+      };
+      sendMessageWithFile(file);
     }
   };
-
-  const deleteMessageForMe = async (messageId) => {
-    try {
-      await axios.put(`http://172.28.109.213:5000/api/message/delete-for-me/${messageId}`, {}, {
-        headers: { Authorization: `Bearer ${token}` },
-      });
-      setMessages((prev) => prev.filter((msg) => msg._id !== messageId));
-    } catch (err) {
-      console.error('Lỗi xóa:', err);
-    }
-  };
+  
 
   const downloadFile = async (url, fileName = 'file.xyz') => {
     try {
       const localPath = FileSystem.documentDirectory + fileName;
       const downloadResumable = FileSystem.createDownloadResumable(url, localPath);
       const { uri } = await downloadResumable.downloadAsync();
-      await WebBrowser.openBrowserAsync(uri);
+      await Sharing.shareAsync(uri);
     } catch (err) {
       console.error('❌ Không thể mở file:', err);
-      Alert.alert('Lỗi', 'Không thể mở file');
     }
   };
 
   useEffect(() => {
-    loadToken();
-  }, []);
-
-  useEffect(() => {
-    if (!token || !currentUserId) return;
-
+    if (!token) return;
     socket.emit('joinChat', chatId);
     fetchMessages();
-
     socket.on('messageReceived', (message) => {
       setMessages((prev) => {
         const exists = prev.some((msg) => msg._id === message._id);
@@ -207,18 +182,16 @@ const ChatScreen = ({ route }) => {
       });
       scrollToBottom();
     });
-
     socket.on('messageRecalled', (updatedMsg) => {
       setMessages((prev) =>
         prev.map((msg) => (msg._id === updatedMsg._id ? { ...msg, isRecalled: true } : msg))
       );
     });
-
     return () => {
       socket.off('messageReceived');
       socket.off('messageRecalled');
     };
-  }, [token, currentUserId]);
+  }, [token]);
 
   return (
     <KeyboardAvoidingView
@@ -229,8 +202,12 @@ const ChatScreen = ({ route }) => {
       <View style={tw`flex-row items-center justify-between px-4 py-3 bg-blue-500 mt-10`}>
         <Text style={tw`text-white text-lg font-bold`}>Zalo Chat</Text>
         <View style={tw`flex-row gap-4`}>
-          <TouchableOpacity><Ionicons name="call-outline" size={22} color="white" /></TouchableOpacity>
-          <TouchableOpacity><MaterialIcons name="video-call" size={24} color="white" /></TouchableOpacity>
+          <TouchableOpacity>
+            <Ionicons name="call-outline" size={22} color="white" />
+          </TouchableOpacity>
+          <TouchableOpacity>
+            <MaterialIcons name="video-call" size={24} color="white" />
+          </TouchableOpacity>
         </View>
       </View>
 
@@ -242,20 +219,21 @@ const ChatScreen = ({ route }) => {
           <ChatMessage
             item={item}
             isSender={item.sender?._id === currentUserId}
-            onRecall={recallMessage}
-            onDelete={deleteMessageForMe}
+            onRecall={() => {}}
+            onDelete={() => {}}
             onDownload={downloadFile}
           />
         )}
         contentContainerStyle={tw`p-3 pb-24`}
         onContentSizeChange={scrollToBottom}
+        initialNumToRender={10}
       />
 
       <View style={tw`absolute bottom-0 w-full flex-row items-center bg-white p-2 border-t border-gray-200`}>
-        <TouchableOpacity onPress={() => pickFile(ImagePicker.launchImageLibraryAsync)} style={tw`mr-2`}>
+        <TouchableOpacity onPress={pickImage} style={tw`mr-2`}>
           <Ionicons name="image-outline" size={24} color="gray" />
         </TouchableOpacity>
-        <TouchableOpacity onPress={() => pickFile(DocumentPicker.getDocumentAsync)} style={tw`mr-2`}>
+        <TouchableOpacity onPress={pickDocument} style={tw`mr-2`}>
           <Ionicons name="document-outline" size={24} color="gray" />
         </TouchableOpacity>
         <TextInput
@@ -264,7 +242,7 @@ const ChatScreen = ({ route }) => {
           placeholder="Nhập tin nhắn"
           style={tw`flex-1 bg-gray-100 px-4 py-2 rounded-full text-sm`}
         />
-        <TouchableOpacity onPress={sendMessage} style={tw`ml-2 bg-blue-500 px-4 py-2 rounded-full`}>
+        <TouchableOpacity onPress={() => sendMessageWithFile({ content: text })} style={tw`ml-2 bg-blue-500 px-4 py-2 rounded-full`}>
           <Text style={tw`text-white font-semibold`}>Gửi</Text>
         </TouchableOpacity>
       </View>
