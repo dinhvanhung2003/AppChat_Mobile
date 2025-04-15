@@ -1,3 +1,4 @@
+// ChatScreen.jsx
 import React, { useEffect, useState, useRef, memo } from 'react';
 import {
   View, Text, TextInput, TouchableOpacity, FlatList, Alert,
@@ -92,7 +93,7 @@ const ChatScreen = ({ route }) => {
   const sendMessage = async () => {
     if (!text.trim()) return;
 
-    // Nếu đang chỉnh sửa
+    // Nếu đang chỉnh sửa tin nhắn
     if (editingMessageId) {
       try {
         const res = await axios.put(`${API_URL}/api/message/edit/${editingMessageId}`, {
@@ -100,7 +101,6 @@ const ChatScreen = ({ route }) => {
         }, {
           headers: { Authorization: `Bearer ${token}` }
         });
-
         const updated = res.data;
         setMessages((prev) =>
           prev.map((m) =>
@@ -123,6 +123,7 @@ const ChatScreen = ({ route }) => {
       }, { headers: { Authorization: `Bearer ${token}` } });
       const newMsg = res.data;
       setMessages((prev) => [...prev, newMsg]);
+      // Sửa sự kiện: lắng nghe 'newMessage'
       socket.emit('newMessage', newMsg);
       setText('');
     } catch (err) {
@@ -225,8 +226,10 @@ const ChatScreen = ({ route }) => {
     socket.emit('joinChat', chatId);
     fetchMessages();
 
-    socket.on('messageReceived', (msg) => {
+    // Lắng nghe sự kiện "newMessage" từ server
+    socket.on('newMessage', (msg) => {
       setMessages((prev) => prev.some((m) => m._id === msg._id) ? prev : [...prev, msg]);
+      // Sau khi cập nhật state, FlatList sẽ tự re-render
       scrollToBottom();
     });
 
@@ -245,7 +248,7 @@ const ChatScreen = ({ route }) => {
     });
 
     return () => {
-      socket.off('messageReceived');
+      socket.off('newMessage');
       socket.off('messageRecalled');
       socket.off('messageEdited');
     };
