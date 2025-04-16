@@ -49,7 +49,7 @@ const ChatMessage = memo(({ item, isSender, onRecall, onDelete, onEdit, onDownlo
 ));
 
 const ChatScreen = ({ route }) => {
-  const { chatId } = route.params;
+  const { chatId, partner } = route.params;
   const [messages, setMessages] = useState([]);
   const [text, setText] = useState('');
   const [token, setToken] = useState('');
@@ -152,7 +152,7 @@ const ChatScreen = ({ route }) => {
       return;
     }
 
-    
+
     const savedText = text;
     setText('');
 
@@ -173,7 +173,7 @@ const ChatScreen = ({ route }) => {
   const sendMessageWithFile = async (file) => {
     const type = file.type.startsWith('image/') ? 'image' : 'file';
     const localId = `local-${Date.now()}`;
-    
+
     const formData = new FormData();
     formData.append('chatId', chatId);
     formData.append('type', type);
@@ -246,7 +246,9 @@ const ChatScreen = ({ route }) => {
   return (
     <KeyboardAvoidingView style={tw`flex-1 bg-white`} behavior={Platform.OS === 'ios' ? 'padding' : undefined} keyboardVerticalOffset={80}>
       <View style={tw`flex-row items-center justify-between px-4 py-3 bg-blue-500 mt-10`}>
-        <Text style={tw`text-white text-lg font-bold`}>Zalo Chat</Text>
+        <Text style={tw`text-white text-lg font-bold`}>
+          {partner?.fullName || 'Đang trò chuyện'}
+        </Text>
         <View style={tw`flex-row gap-4`}>
           <TouchableOpacity><Ionicons name="call-outline" size={22} color="white" /></TouchableOpacity>
           <TouchableOpacity><MaterialIcons name="video-call" size={24} color="white" /></TouchableOpacity>

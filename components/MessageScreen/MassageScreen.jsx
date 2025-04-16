@@ -149,7 +149,7 @@ const MessageListScreen = () => {
     return (
       <TouchableOpacity
         style={tw`flex-row items-center p-3 border-b border-gray-200`}
-        onPress={() => navigation.navigate('ChatScreen', { chatId: item._id })}
+        onPress={() => navigation.navigate('ChatScreen', { chatId: item._id,partner: otherUser ,})}
       >
         <Image
           source={{ uri: otherUser?.avatar || 'https://via.placeholder.com/150' }}
