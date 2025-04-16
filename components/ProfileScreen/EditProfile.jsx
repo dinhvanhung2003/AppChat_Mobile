@@ -24,9 +24,6 @@ const EditProfileScreen = ({ route, navigation }) => {
     }
   };
 ;
-  
-
-
   const handleUpdate = async () => {
     try {
       const userData = await AsyncStorage.getItem("user");
