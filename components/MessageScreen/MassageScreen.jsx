@@ -73,7 +73,15 @@ const MessageListScreen = () => {
         const existingIndex = prevChats.findIndex((chat) => chat._id === chatId);
 
         const latestMessage = {
-          content: newMsg.isRecalled ? '[Đã thu hồi]' : newMsg.content,
+          content: newMsg.isRecalled
+            ? '[Đã thu hồi]'
+            : newMsg.content
+              ? newMsg.content
+              : newMsg.image
+                ? '[Ảnh]'
+                : newMsg.file
+                  ? '[Tệp đính kèm]'
+                  : '[Tin nhắn]',
           createdAt: newMsg.createdAt,
           isRecalled: newMsg.isRecalled,
         };
