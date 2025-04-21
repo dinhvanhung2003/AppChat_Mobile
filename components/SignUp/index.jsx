@@ -13,7 +13,7 @@ import tw from "twrnc";
 
 import { Picker } from "@react-native-picker/picker";
 import DateTimePicker from "@react-native-community/datetimepicker";
-const API_URL = 'http://192.168.1.12:5000'; 
+const API_URL = 'http://192.168.88.179:5000'; 
 const SignupScreen = ({ navigation }) => {
   const [fullName, setFullName] = useState("");
   const [email, setEmail] = useState("");

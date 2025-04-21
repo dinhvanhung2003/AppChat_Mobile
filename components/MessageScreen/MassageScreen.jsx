@@ -1,4 +1,3 @@
-// MessageListScreen.jsx
 import React, { useState, useEffect, useCallback } from 'react';
 import {
   View, Text, TextInput, FlatList, TouchableOpacity, Image, Alert,
@@ -8,12 +7,12 @@ import AsyncStorage from '@react-native-async-storage/async-storage';
 import tw from 'twrnc';
 import NavigationBar from '../MessageScreen/NavigationBar';
 import useTabNavigation from '../../hooks/useTabNavigation';
-import { useNavigation, useFocusEffect } from '@react-navigation/native';
+import { useNavigation } from '@react-navigation/native';
 import axios from 'axios';
 import { jwtDecode } from 'jwt-decode';
 import { io } from 'socket.io-client';
 
-const API_URL = 'http://192.168.1.12:5000';
+const API_URL = 'http://192.168.88.179:5000';
 const socket = io(API_URL, { transports: ['websocket'] });
 
 const MessageListScreen = () => {
@@ -56,47 +55,61 @@ const MessageListScreen = () => {
     }
   }, [token]);
 
-  useFocusEffect(
-    useCallback(() => {
+  // Gọi lại fetchChats mỗi khi màn hình MessageList được focus
+  useEffect(() => {
+    const unsubscribe = navigation.addListener('focus', () => {
       if (token) fetchChats();
-    }, [token, fetchChats])
-  );
+    });
+    return unsubscribe;
+  }, [navigation, token, fetchChats]);
 
   useEffect(() => {
     if (!token || !currentUserId) return;
-  
-    socket.on('messageReceived', (newMsg) => {
-      const chatData = newMsg.chat;
+
+    const handleMessage = (newMsg) => {
+      const chatId = newMsg.chat?._id || newMsg.chatId;
+
       setChats((prevChats) => {
-        const existingIndex = prevChats.findIndex((chat) => chat._id === chatData._id);
-  
-        const updatedChat = {
-          ...chatData,
-          latestMessage: {
-            content: newMsg.isRecalled ? '[Đã thu hồi]' : newMsg.content,
-            createdAt: newMsg.createdAt,
-            isRecalled: newMsg.isRecalled,
-          },
+        const existingIndex = prevChats.findIndex((chat) => chat._id === chatId);
+
+        const latestMessage = {
+          content: newMsg.isRecalled ? '[Đã thu hồi]' : newMsg.content,
+          createdAt: newMsg.createdAt,
+          isRecalled: newMsg.isRecalled,
         };
-  
+
         if (existingIndex !== -1) {
+          const updatedChat = {
+            ...prevChats[existingIndex],
+            latestMessage,
+          };
+
           const newList = [
             updatedChat,
             ...prevChats.slice(0, existingIndex),
             ...prevChats.slice(existingIndex + 1),
           ];
+
           return newList;
         } else {
-          return [updatedChat, ...prevChats];
+          fetchChats();
+          return prevChats;
         }
       });
-    });
-  
-    return () => {
-      socket.off('messageReceived');
     };
-  }, [token, currentUserId]);
-  
+
+    socket.on('messageReceived', handleMessage);
+    socket.on('newMessage', handleMessage);
+    socket.on('messageEdited', handleMessage);
+    socket.on('messageRecalled', handleMessage);
+
+    return () => {
+      socket.off('messageReceived', handleMessage);
+      socket.off('newMessage', handleMessage);
+      socket.off('messageEdited', handleMessage);
+      socket.off('messageRecalled', handleMessage);
+    };
+  }, [token, currentUserId, fetchChats]);
 
   const handleSearch = async () => {
     if (!searchText.trim()) return;
@@ -136,7 +149,7 @@ const MessageListScreen = () => {
     return (
       <TouchableOpacity
         style={tw`flex-row items-center p-3 border-b border-gray-200`}
-        onPress={() => navigation.navigate('ChatScreen', { chatId: item._id })}
+        onPress={() => navigation.navigate('ChatScreen', { chatId: item._id,partner: otherUser ,})}
       >
         <Image
           source={{ uri: otherUser?.avatar || 'https://via.placeholder.com/150' }}
@@ -220,7 +233,7 @@ const MessageListScreen = () => {
 
       <FlatList
         data={searchResults.length > 0 ? searchResults : chats}
-        keyExtractor={(item) => item._id || item.id}
+        keyExtractor={(item, index) => `${item._id || item.id}_${index}`}
         renderItem={searchResults.length > 0 ? renderSearchItem : renderItem}
         style={tw`flex-1`}
         contentContainerStyle={{ paddingBottom: 60 }}
