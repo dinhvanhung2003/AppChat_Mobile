@@ -12,7 +12,7 @@ import axios from 'axios';
 import { jwtDecode } from 'jwt-decode';
 import { io } from 'socket.io-client';
 
-const API_URL = 'http://192.168.137.194:5000';
+const API_URL = 'http://192.168.1.5:5000';
 const socket = io(API_URL, { transports: ['websocket'] });
 
 const MessageListScreen = () => {

@@ -14,7 +14,7 @@ import * as FileSystem from 'expo-file-system';
 import * as Sharing from 'expo-sharing';
 import AsyncStorage from '@react-native-async-storage/async-storage';
 
-const API_URL = 'http://192.168.137.194:5000';
+const API_URL = 'http://192.168.1.5:5000';
 const socket = io(API_URL, { transports: ['websocket'] });
 
 const ChatMessage = memo(({ item, isSender, onRecall, onDelete, onEdit, onDownload }) => (
