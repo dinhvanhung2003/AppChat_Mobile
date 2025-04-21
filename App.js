@@ -15,6 +15,9 @@ import ResetPasswordScreen from './components/LogIn/ResetPasswordScreen';
 import ChangePass from './components/ProfileScreen/ChangePassword';
 import EditProfile from './components/ProfileScreen/EditProfile';
 import ChatSceen from './components/MessageScreen/ChatScreen';
+import GroupListScreen from './components/MessageScreen/GroupListScreen';
+import GroupCreateScreen from './components/MessageScreen/GroupCreateScreen';
+import GroupDetailScreen from './components/MessageScreen/GroupDetailScreen';
 const Stack = createStackNavigator();
 
 export default function App() {
@@ -35,6 +38,9 @@ export default function App() {
         <Stack.Screen name="NewScreen" component={NewScreen} />
         <Stack.Screen name="ProfileScreen" component={ProfileScreen} />
         <Stack.Screen name="Login" component={Login} />
+        <Stack.Screen name="GroupListScreen" component={GroupListScreen} />
+        <Stack.Screen name="GroupCreateScreen" component={GroupCreateScreen} />
+        <Stack.Screen name="GroupDetailScreen" component={GroupDetailScreen} />
       </Stack.Navigator>
     </NavigationContainer>
   );

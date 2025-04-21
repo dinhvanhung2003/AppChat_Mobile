@@ -17,22 +17,34 @@ import AsyncStorage from '@react-native-async-storage/async-storage';
 const API_URL = 'http://192.168.1.5:5000';
 const socket = io(API_URL, { transports: ['websocket'] });
 
-const ChatMessage = memo(({ item, isSender, onRecall, onDelete, onEdit, onDownload }) => (
+const ChatMessage = memo(({ item, isSender, onRecall, onDelete, onEdit, onDownload, selectedMessageId, setSelectedMessageId }) => (
   <View style={tw`mb-2 px-2`}>
-    <View style={tw`max-w-[75%] px-3 py-2 rounded-xl ${isSender ? 'bg-blue-500 self-end' : 'bg-gray-200 self-start'}`}>
-      {item.isRecalled ? (
-        <Text style={tw`italic text-gray-400`}>[Tin nhắn đã thu hồi]</Text>
-      ) : item.type === 'image' ? (
-        <Image source={{ uri: item.fileUrl }} style={tw`w-40 h-40 rounded`} />
-      ) : item.type === 'file' ? (
-        <TouchableOpacity onPress={() => onDownload(item.fileUrl, item.fileName)}>
-          <Text style={tw`${isSender ? 'text-white' : 'text-black'}`}>📎 {item.fileName}</Text>
-        </TouchableOpacity>
-      ) : (
-        <Text style={tw`${isSender ? 'text-white' : 'text-black'}`}>{item.content} {item.isEdited && '(đã chỉnh sửa)'}</Text>
-      )}
-    </View>
-    {isSender && !item.isRecalled && !item._id.startsWith('local-') && (
+      <TouchableOpacity
+        activeOpacity={0.9}
+        onPress={() => {
+          if (selectedMessageId === item._id) {
+            setSelectedMessageId(null); // nếu đã hiện thì ẩn
+          } else {
+            setSelectedMessageId(item._id); // hiện menu
+          }
+        }}
+      >
+      <View style={tw`max-w-[75%] px-3 py-2 rounded-xl ${isSender ? 'bg-blue-500 self-end' : 'bg-gray-200 self-start'}`}>
+        {item.isRecalled ? (
+          <Text style={tw`italic text-gray-400`}>[Tin nhắn đã thu hồi]</Text>
+        ) : item.type === 'image' ? (
+          <Image source={{ uri: item.fileUrl }} style={tw`w-40 h-40 rounded`} />
+        ) : item.type === 'file' ? (
+          <TouchableOpacity onPress={() => onDownload(item.fileUrl, item.fileName)}>
+            <Text style={tw`${isSender ? 'text-white' : 'text-black'}`}>📎 {item.fileName}</Text>
+          </TouchableOpacity>
+        ) : (
+          <Text style={tw`${isSender ? 'text-white' : 'text-black'}`}>{item.content} {item.isEdited && '(đã chỉnh sửa)'}</Text>
+        )}
+      </View>
+    </TouchableOpacity>
+
+    {isSender && !item.isRecalled && !item._id.startsWith('local-') && selectedMessageId === item._id &&(
       <View style={tw`flex-row self-end mt-1`}>
         <TouchableOpacity onPress={() => onRecall(item._id)}>
           <Text style={tw`text-xs text-blue-200 mr-2`}>Thu hồi</Text>
@@ -57,6 +69,8 @@ const ChatScreen = ({ route }) => {
   const [editingMessageId, setEditingMessageId] = useState(null);
   const [loading, setLoading] = useState(true);
   const flatListRef = useRef();
+  const [selectedMessageId, setSelectedMessageId] = useState(null);
+
 
   const scrollToBottom = () => flatListRef.current?.scrollToEnd({ animated: true });
 
@@ -112,10 +126,18 @@ const ChatScreen = ({ route }) => {
     };
 
     const handleRecall = (msg) => {
+      if (!msg || !msg._id) return;
+    
       setMessages((prev) =>
-        prev.map((m) => m._id === msg._id ? { ...m, isRecalled: true } : m)
+        prev.map((m) => {
+          if (m._id === msg._id || m._id.toString() === msg._id.toString()) {
+            return { ...m, isRecalled: true };
+          }
+          return m;
+        })
       );
     };
+    
 
     socket.on('newMessage', handleMessage);
     socket.on('messageReceived', handleMessage);
@@ -141,6 +163,7 @@ const ChatScreen = ({ route }) => {
           headers: { Authorization: `Bearer ${token}` },
         });
         socket.emit('messageEdited', res.data);
+        scrollToBottom();
         setMessages((prev) =>
           prev.map((m) => m._id === res.data._id ? { ...m, content: res.data.content, isEdited: true } : m)
         );
@@ -165,16 +188,36 @@ const ChatScreen = ({ route }) => {
         headers: { Authorization: `Bearer ${token}` },
       });
       socket.emit('newMessage', res.data);
+      scrollToBottom();
     } catch {
       Alert.alert('Lỗi', 'Không thể gửi tin nhắn');
     }
   };
+  
 
   const sendMessageWithFile = async (file) => {
     const type = file.type.startsWith('image/') ? 'image' : 'file';
     const localId = `local-${Date.now()}`;
 
     const formData = new FormData();
+    // const type = file.type.startsWith('image/') ? 'image' : 'file';
+
+    const temp = {
+      _id: `local-${Date.now()}`,
+      sender: { _id: currentUserId },
+      chat: { _id: chatId },
+      createdAt: new Date().toISOString(),
+      type,
+      fileUrl: file.uri,
+      fileName: file.name,
+      content: '',
+      isRecalled: false,
+      isEdited: false,
+    };
+
+    setMessages((prev) => [...prev, temp]);
+    scrollToBottom();
+
     formData.append('chatId', chatId);
     formData.append('type', type);
     formData.append('file', {
@@ -216,7 +259,14 @@ const ChatScreen = ({ route }) => {
 
   const recallMessage = async (id) => {
     try {
-      const res = await axios.put(`${API_URL}/api/message/recall/${id}`, {}, { headers: { Authorization: `Bearer ${token}` } });
+      await axios.put(`${API_URL}/api/message/recall/${id}`, {}, { headers: { Authorization: `Bearer ${token}` } });
+  
+      // Cập nhật local ngay lập tức
+      setMessages((prev) =>
+        prev.map((m) => m._id === id ? { ...m, isRecalled: true } : m)
+      );
+  
+      // Gửi socket cho người khác
       socket.emit('messageRecalled', { _id: id });
     } catch {
       Alert.alert('Lỗi', 'Không thể thu hồi tin nhắn');
@@ -244,7 +294,8 @@ const ChatScreen = ({ route }) => {
   };
 
   return (
-    <KeyboardAvoidingView style={tw`flex-1 bg-white`} behavior={Platform.OS === 'ios' ? 'padding' : undefined} keyboardVerticalOffset={80}>
+    // <KeyboardAvoidingView style={tw`flex-1 bg-white`} behavior={Platform.OS === 'ios' ? 'padding' : undefined} keyboardVerticalOffset={80}>
+    <KeyboardAvoidingView style={tw`flex-1 bg-white`} behavior={Platform.OS === 'ios' ? 'padding' : 'height'} keyboardVerticalOffset={Platform.OS === 'ios' ? 80 : 20} >
       <View style={tw`flex-row items-center justify-between px-4 py-3 bg-blue-500 mt-10`}>
         <Text style={tw`text-white text-lg font-bold`}>
           {partner?.fullName || 'Đang trò chuyện'}
@@ -261,6 +312,7 @@ const ChatScreen = ({ route }) => {
           ref={flatListRef}
           data={messages}
           keyExtractor={(item, index) => `${item._id}_${index}`}
+          onContentSizeChange={() => scrollToBottom()}
           renderItem={({ item }) => (
             <ChatMessage
               item={item}
@@ -272,12 +324,14 @@ const ChatScreen = ({ route }) => {
                 setText(msg.content);
               }}
               onDownload={downloadFile}
+              selectedMessageId={selectedMessageId}               
+              setSelectedMessageId={setSelectedMessageId}       
             />
           )}
           contentContainerStyle={tw`p-3 pb-24`}
         />
       )}
-      <View style={tw`absolute bottom-0 w-full flex-row items-center bg-white p-2 border-t border-gray-200`}>
+      <View style={tw`flex-row items-center bg-white p-2 border-t border-gray-200`}>
         <TouchableOpacity onPress={pickImage} style={tw`mr-2`}><Ionicons name="image-outline" size={24} color="gray" /></TouchableOpacity>
         <TouchableOpacity onPress={pickDocument} style={tw`mr-2`}><Ionicons name="document-outline" size={24} color="gray" /></TouchableOpacity>
         <TextInput
@@ -285,6 +339,9 @@ const ChatScreen = ({ route }) => {
           onChangeText={setText}
           placeholder={editingMessageId ? 'Chỉnh sửa tin nhắn...' : 'Nhập tin nhắn'}
           style={tw`flex-1 bg-gray-100 px-4 py-2 rounded-full text-sm`}
+          returnKeyType="send" // 👈 tuỳ chọn, hiển thị chữ "Send" thay vì "Enter" trên bàn phím
+          onSubmitEditing={sendMessage} // 👈 Gửi khi nhấn Enter
+          blurOnSubmit={false} // 👈 Giữ bàn phím mở sau khi gửi (tuỳ chọn)
         />
         <TouchableOpacity
           onPress={sendMessage}
