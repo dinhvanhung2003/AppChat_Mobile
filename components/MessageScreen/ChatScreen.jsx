@@ -372,15 +372,13 @@ import * as DocumentPicker from 'expo-document-picker';
 import * as FileSystem from 'expo-file-system';
 import * as Sharing from 'expo-sharing';
 import AsyncStorage from '@react-native-async-storage/async-storage';
+import { useNavigation } from '@react-navigation/native';
 
-const API_URL = 'http://192.168.1.5:5000';
+const API_URL = 'http://192.168.1.6:5000';
 const socket = io(API_URL, { transports: ['websocket'] });
 
-const ChatMessage = memo(({ item, isSender, onRecall, onDelete, onEdit, onDownload, selectedMessageId, setSelectedMessageId, showSenderName }) => (
+const ChatMessage = memo(({ item, isSender, onRecall, onDelete, onEdit, onDownload, selectedMessageId, setSelectedMessageId }) => (
   <View style={tw`mb-2 px-2`}>
-    {showSenderName && !isSender && !item.isRecalled && (
-      <Text style={tw`text-xs text-gray-500 mb-1 ml-1`}>{item.sender?.fullName}</Text>
-    )}
     <TouchableOpacity
       activeOpacity={0.9}
       onPress={() => {
@@ -388,6 +386,11 @@ const ChatMessage = memo(({ item, isSender, onRecall, onDelete, onEdit, onDownlo
       }}
     >
       <View style={tw`max-w-[75%] px-3 py-2 rounded-xl ${isSender ? 'bg-blue-500 self-end' : 'bg-gray-200 self-start'}`}>
+        {/* 👇 Tên người gửi (chỉ hiển thị khi không phải tin nhắn của mình và có tên) */}
+        {!isSender && item.sender?.fullName && (
+          <Text style={tw`text-xs text-gray-500 mb-1 ml-1`}>{item.sender.fullName}</Text>
+        )}
+
         {item.isRecalled ? (
           <Text style={tw`italic text-gray-400`}>[Tin nhắn đã thu hồi]</Text>
         ) : item.type === 'image' ? (
@@ -397,7 +400,9 @@ const ChatMessage = memo(({ item, isSender, onRecall, onDelete, onEdit, onDownlo
             <Text style={tw`${isSender ? 'text-white' : 'text-black'}`}>📎 {item.fileName}</Text>
           </TouchableOpacity>
         ) : (
-          <Text style={tw`${isSender ? 'text-white' : 'text-black'}`}>{item.content} {item.isEdited && '(đã chỉnh sửa)'}</Text>
+          <Text style={tw`${isSender ? 'text-white' : 'text-black'}`}>
+            {item.content} {item.isEdited && '(đã chỉnh sửa)'}
+          </Text>
         )}
       </View>
     </TouchableOpacity>
@@ -413,15 +418,16 @@ const ChatMessage = memo(({ item, isSender, onRecall, onDelete, onEdit, onDownlo
 ));
 
 const ChatScreen = ({ route }) => {
-  const { chatId, partner, chatName } = route.params;
+  const { chatId, partner, chatName, isGroup = false, group = null } = route.params;
   const [messages, setMessages] = useState([]);
   const [text, setText] = useState('');
   const [token, setToken] = useState('');
   const [currentUserId, setCurrentUserId] = useState('');
   const [editingMessageId, setEditingMessageId] = useState(null);
   const [loading, setLoading] = useState(true);
-  const flatListRef = useRef();
   const [selectedMessageId, setSelectedMessageId] = useState(null);
+  const flatListRef = useRef();
+  const navigation = useNavigation();
 
   const scrollToBottom = () => flatListRef.current?.scrollToEnd({ animated: true });
 
@@ -439,6 +445,7 @@ const ChatScreen = ({ route }) => {
 
   useEffect(() => {
     if (token && chatId) {
+      console.log('✅ Joined chatId:', chatId); // Thêm dòng này
       socket.emit('joinChat', chatId);
       fetchMessages();
     }
@@ -447,15 +454,22 @@ const ChatScreen = ({ route }) => {
   const fetchMessages = async () => {
     setLoading(true);
     try {
+      console.log('📩 Fetching messages for chatId:', chatId);
       const res = await axios.get(`${API_URL}/api/message/${chatId}`, {
         headers: { Authorization: `Bearer ${token}` },
       });
+      console.log('📥 Messages fetched:', res.data); // 👈 kiểm tra có dữ liệu không
       setMessages(res.data);
-      setTimeout(() => { scrollToBottom(); setLoading(false); }, 300);
-    } catch {
+      setTimeout(() => {
+        scrollToBottom();
+        setLoading(false);
+      }, 300);
+    } catch (err) {
+      console.error('❌ Lỗi tải tin nhắn:', err.response?.data || err.message);
       setLoading(false);
     }
   };
+  
 
   useEffect(() => {
     const handleMessage = (msg) => {
@@ -532,12 +546,19 @@ const ChatScreen = ({ route }) => {
     }
   };
 
+  const downloadFile = async (url, fileName = 'file.xyz') => {
+    try {
+      const localPath = FileSystem.documentDirectory + fileName;
+      const downloadResumable = FileSystem.createDownloadResumable(url, localPath);
+      const { uri } = await downloadResumable.downloadAsync();
+      await Sharing.shareAsync(uri);
+    } catch (err) {
+      console.error('Lỗi mở file:', err);
+    }
+  };
+
   const pickImage = async () => {
-    const result = await ImagePicker.launchImageLibraryAsync({
-      mediaTypes: ImagePicker.MediaTypeOptions.Images,
-      allowsEditing: true,
-      quality: 0.7
-    });
+    const result = await ImagePicker.launchImageLibraryAsync({ mediaTypes: ImagePicker.MediaTypeOptions.Images, allowsEditing: true, quality: 0.7 });
     if (!result.canceled && result.assets?.length > 0) {
       const asset = result.assets[0];
       const name = asset.uri.split('/').pop();
@@ -615,27 +636,17 @@ const ChatScreen = ({ route }) => {
     }
   };
 
-  const downloadFile = async (url, fileName = 'file.xyz') => {
-    try {
-      const localPath = FileSystem.documentDirectory + fileName;
-      const downloadResumable = FileSystem.createDownloadResumable(url, localPath);
-      const { uri } = await downloadResumable.downloadAsync();
-      await Sharing.shareAsync(uri);
-    } catch (err) {
-      console.error('Lỗi mở file:', err);
-    }
-  };
-
   return (
     <KeyboardAvoidingView style={tw`flex-1 bg-white`} behavior={Platform.OS === 'ios' ? 'padding' : 'height'} keyboardVerticalOffset={Platform.OS === 'ios' ? 80 : 20}>
       <View style={tw`flex-row items-center justify-between px-4 py-3 bg-blue-500 mt-10`}>
         <Text style={tw`text-white text-lg font-bold`}>
-          {partner?.fullName || chatName || 'Nhóm'}
+          {isGroup ? chatName : (partner?.fullName || 'Đang trò chuyện')}
         </Text>
-        <View style={tw`flex-row gap-4`}>
-          <TouchableOpacity><Ionicons name="call-outline" size={22} color="white" /></TouchableOpacity>
-          <TouchableOpacity><MaterialIcons name="video-call" size={24} color="white" /></TouchableOpacity>
-        </View>
+        {isGroup && group?.groupAdmin?._id === currentUserId && (
+          <TouchableOpacity onPress={() => navigation.navigate('GroupDetailScreen', { group })}>
+            <Text style={tw`text-white underline text-sm`}>Quản lý nhóm</Text>
+          </TouchableOpacity>
+        )}
       </View>
 
       {loading ? (
@@ -660,7 +671,6 @@ const ChatScreen = ({ route }) => {
               onDownload={downloadFile}
               selectedMessageId={selectedMessageId}
               setSelectedMessageId={setSelectedMessageId}
-              showSenderName={!!chatName && item.sender?._id !== currentUserId}
             />
           )}
           contentContainerStyle={tw`p-3 pb-24`}

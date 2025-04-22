@@ -12,7 +12,7 @@ import axios from 'axios';
 import { jwtDecode } from 'jwt-decode';
 import { io } from 'socket.io-client';
 
-const API_URL = 'http://192.168.1.5:5000';
+const API_URL = 'http://192.168.1.6:5000';
 const socket = io(API_URL, { transports: ['websocket'] });
 
 const MessageListScreen = () => {
@@ -44,18 +44,25 @@ const MessageListScreen = () => {
       const res = await axios.get(`${API_URL}/api/chat`, {
         headers: { Authorization: `Bearer ${token}` },
       });
-      const sortedChats = res.data.sort((a, b) => {
+
+      // ✅ Loại trùng _id
+      const uniqueChats = res.data.filter(
+        (chat, index, self) =>
+          index === self.findIndex((c) => c._id === chat._id)
+      );
+
+      const sortedChats = uniqueChats.sort((a, b) => {
         const dateA = new Date(a.latestMessage?.createdAt || a.updatedAt);
         const dateB = new Date(b.latestMessage?.createdAt || b.updatedAt);
         return dateB - dateA;
       });
+
       setChats(sortedChats);
     } catch (err) {
       console.error('❌ Lỗi lấy danh sách chat:', err);
     }
   }, [token]);
 
-  // Gọi lại fetchChats mỗi khi màn hình MessageList được focus
   useEffect(() => {
     const unsubscribe = navigation.addListener('focus', () => {
       if (token) fetchChats();
@@ -84,13 +91,16 @@ const MessageListScreen = () => {
             latestMessage,
           };
 
-          const newList = [
+          const updatedList = [
             updatedChat,
             ...prevChats.slice(0, existingIndex),
             ...prevChats.slice(existingIndex + 1),
           ];
 
-          return newList;
+          return updatedList.filter(
+            (chat, index, self) =>
+              index === self.findIndex((c) => c._id === chat._id)
+          );
         } else {
           fetchChats();
           return prevChats;
@@ -149,9 +159,9 @@ const MessageListScreen = () => {
     const otherUser = item.users?.find((u) => u._id !== currentUserId);
     const displayName = isGroupChat ? item.chatName : otherUser?.fullName || 'Không rõ';
     const displayAvatar = isGroupChat
-      ? 'https://cdn-icons-png.flaticon.com/512/74/74472.png' // icon nhóm
+      ? 'https://cdn-icons-png.flaticon.com/512/74/74472.png'
       : otherUser?.avatar || 'https://via.placeholder.com/150';
-  
+
     return (
       <TouchableOpacity
         style={tw`flex-row items-center p-3 border-b border-gray-200`}
@@ -160,6 +170,8 @@ const MessageListScreen = () => {
             chatId: item._id,
             partner: isGroupChat ? null : otherUser,
             chatName: isGroupChat ? item.chatName : null,
+            isGroup: isGroupChat,
+            group: isGroupChat ? item : null,
           })
         }
       >
@@ -185,7 +197,6 @@ const MessageListScreen = () => {
       </TouchableOpacity>
     );
   };
-  
 
   const renderSearchItem = ({ item }) => (
     <TouchableOpacity
@@ -226,27 +237,22 @@ const MessageListScreen = () => {
       </View>
 
       <View style={tw`flex-row border-b`}>
-        <TouchableOpacity
-          onPress={() => setActiveTab('Ưu tiên')}
-          style={tw`flex-1 p-3 items-center`}
-        >
-          <Text style={tw`${activeTab === 'Ưu tiên' ? 'text-blue-500 font-bold' : 'text-gray-600'}`}>
-            Ưu tiên
-          </Text>
-        </TouchableOpacity>
-        <TouchableOpacity
-          onPress={() => setActiveTab('Khác')}
-          style={tw`flex-1 p-3 items-center`}
-        >
-          <Text style={tw`${activeTab === 'Khác' ? 'text-blue-500 font-bold' : 'text-gray-600'}`}>
-            Khác
-          </Text>
-        </TouchableOpacity>
+        {['Ưu tiên', 'Khác'].map((tab) => (
+          <TouchableOpacity
+            key={tab}
+            onPress={() => setActiveTab(tab)}
+            style={tw`flex-1 p-3 items-center`}
+          >
+            <Text style={tw`${activeTab === tab ? 'text-blue-500 font-bold' : 'text-gray-600'}`}>
+              {tab}
+            </Text>
+          </TouchableOpacity>
+        ))}
       </View>
 
       <FlatList
         data={searchResults.length > 0 ? searchResults : chats}
-        keyExtractor={(item, index) => `${item._id || item.id}_${index}`}
+        keyExtractor={(item) => `${item._id}`}
         renderItem={searchResults.length > 0 ? renderSearchItem : renderItem}
         style={tw`flex-1`}
         contentContainerStyle={{ paddingBottom: 60 }}

@@ -9,7 +9,7 @@ import { jwtDecode } from 'jwt-decode';
 import { io } from 'socket.io-client';
 import tw from 'twrnc';
 
-const API_URL = 'http://192.168.1.5:5000';
+const API_URL = 'http://192.168.1.6:5000';
 const socket = io(API_URL, { transports: ['websocket'] });
 
 const GroupCreateScreen = () => {
@@ -49,7 +49,7 @@ const GroupCreateScreen = () => {
       Alert.alert('Lỗi', 'Cần ít nhất 2 thành viên và tên nhóm');
       return;
     }
-
+  
     try {
       const res = await axios.post(
         `${API_URL}/api/chat/group`,
@@ -61,12 +61,28 @@ const GroupCreateScreen = () => {
           headers: { Authorization: `Bearer ${token}` },
         }
       );
-
-      socket.emit('group:new', res.data);
-      Alert.alert('Thành công', 'Tạo nhóm thành công!');
-      navigation.goBack(); // Quay về danh sách nhóm
+  
+      const groupChat = res.data;
+  
+      // ✅ Sau khi tạo nhóm thì gửi tin nhắn thông báo vào nhóm
+      const systemMessage = {
+        chatId: groupChat._id,
+        content: 'Bạn đã được thêm vào nhóm',
+        type: 'text',
+      };
+  
+      const messageRes = await axios.post(`${API_URL}/api/message`, systemMessage, {
+        headers: { Authorization: `Bearer ${token}` },
+      });
+  
+      // ✅ Emit socket tạo nhóm + tin nhắn hệ thống
+      socket.emit('group:new', groupChat);
+      socket.emit('newMessage', messageRes.data);
+  
+      Alert.alert('Thành công', 'Tạo nhóm và gửi thông báo thành công!');
+      navigation.goBack();
     } catch (err) {
-      console.error('❌ Lỗi tạo nhóm:', err);
+      console.error('❌ Lỗi tạo nhóm:', err?.response?.data || err.message);
       Alert.alert('Lỗi', 'Không thể tạo nhóm.');
     }
   };
