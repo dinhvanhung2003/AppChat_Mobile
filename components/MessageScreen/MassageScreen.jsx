@@ -145,20 +145,32 @@ const MessageListScreen = () => {
   };
 
   const renderItem = ({ item }) => {
+    const isGroupChat = item.isGroupChat;
     const otherUser = item.users?.find((u) => u._id !== currentUserId);
+    const displayName = isGroupChat ? item.chatName : otherUser?.fullName || 'Không rõ';
+    const displayAvatar = isGroupChat
+      ? 'https://cdn-icons-png.flaticon.com/512/74/74472.png' // icon nhóm
+      : otherUser?.avatar || 'https://via.placeholder.com/150';
+  
     return (
       <TouchableOpacity
         style={tw`flex-row items-center p-3 border-b border-gray-200`}
-        onPress={() => navigation.navigate('ChatScreen', { chatId: item._id,partner: otherUser ,})}
+        onPress={() =>
+          navigation.navigate('ChatScreen', {
+            chatId: item._id,
+            partner: isGroupChat ? null : otherUser,
+            chatName: isGroupChat ? item.chatName : null,
+          })
+        }
       >
         <Image
-          source={{ uri: otherUser?.avatar || 'https://via.placeholder.com/150' }}
+          source={{ uri: displayAvatar }}
           style={tw`w-12 h-12 rounded-full`}
         />
         <View style={tw`ml-3 flex-1`}>
           <View style={tw`flex-row justify-between`}>
             <Text style={tw`text-base font-semibold`}>
-              {otherUser?.fullName || 'Không rõ'}
+              {displayName}
             </Text>
             <Text style={tw`text-xs text-gray-500`}>
               {item.latestMessage?.createdAt?.substring(11, 16) || ''}
@@ -173,6 +185,7 @@ const MessageListScreen = () => {
       </TouchableOpacity>
     );
   };
+  
 
   const renderSearchItem = ({ item }) => (
     <TouchableOpacity
