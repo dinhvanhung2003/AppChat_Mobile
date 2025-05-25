@@ -72,52 +72,70 @@ const MessageListScreen = () => {
 
   useEffect(() => {
     if (!token || !currentUserId) return;
-
+  
     const handleMessage = (newMsg) => {
       const chatId = newMsg.chat?._id || newMsg.chatId;
-
+  
       setChats((prevChats) => {
         const existingIndex = prevChats.findIndex((chat) => chat._id === chatId);
-
+  
         const latestMessage = {
           content: newMsg.isRecalled ? '[Đã thu hồi]' : newMsg.content,
           createdAt: newMsg.createdAt,
           isRecalled: newMsg.isRecalled,
         };
-
+  
         if (existingIndex !== -1) {
           const updatedChat = {
             ...prevChats[existingIndex],
             latestMessage,
           };
-
+  
           const updatedList = [
             updatedChat,
             ...prevChats.slice(0, existingIndex),
             ...prevChats.slice(existingIndex + 1),
           ];
-
+  
           return updatedList.filter(
             (chat, index, self) =>
               index === self.findIndex((c) => c._id === chat._id)
           );
         } else {
-          fetchChats();
+          fetchChats(); // 👈 nếu chưa có thì fetch lại
           return prevChats;
         }
       });
     };
-
+  
+    const handleGroupUpdated = (updatedGroup) => {
+      fetchChats(); // 👈 luôn gọi lại API
+    };
+  
+    const handleGroupDeleted = ({ chatId }) => {
+      setChats((prevChats) => prevChats.filter((chat) => chat._id !== chatId));
+    };
+  
+    const handleGroupRemoved = (chatId) => {
+      setChats((prevChats) => prevChats.filter((chat) => chat._id !== chatId));
+    };
+  
     socket.on('messageReceived', handleMessage);
     socket.on('newMessage', handleMessage);
     socket.on('messageEdited', handleMessage);
     socket.on('messageRecalled', handleMessage);
-
+    socket.on('group:updated', handleGroupUpdated);
+    socket.on('group:deleted', handleGroupDeleted);
+    socket.on('group:removed', handleGroupRemoved);
+  
     return () => {
       socket.off('messageReceived', handleMessage);
       socket.off('newMessage', handleMessage);
       socket.off('messageEdited', handleMessage);
       socket.off('messageRecalled', handleMessage);
+      socket.off('group:updated', handleGroupUpdated);
+      socket.off('group:deleted', handleGroupDeleted);
+      socket.off('group:removed', handleGroupRemoved);
     };
   }, [token, currentUserId, fetchChats]);
 
@@ -172,6 +190,10 @@ const MessageListScreen = () => {
             chatName: isGroupChat ? item.chatName : null,
             isGroup: isGroupChat,
             group: isGroupChat ? item : null,
+             // ✅ Thêm các dòng này:
+      callerId: currentUserId,
+      calleeId: otherUser?._id,
+      isCaller: false, // Mặc định khi mở trò chuyện, không gọi ngay
           })
         }
       >

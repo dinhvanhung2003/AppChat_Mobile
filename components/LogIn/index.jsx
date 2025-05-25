@@ -44,8 +44,15 @@ const LoginScreen = ({ navigation }) => {
   
       if (response.ok) {
         // Lưu token và user riêng biệt
-        await AsyncStorage.setItem("token", data.token);
-        await AsyncStorage.setItem("user", JSON.stringify(data));
+        if (data.token) {
+  await AsyncStorage.setItem("token", data.token);
+  await AsyncStorage.setItem("user", JSON.stringify(data));
+  navigation.navigate("MessageScreen");
+} else {
+  await AsyncStorage.removeItem("token"); // để chắc chắn không giữ lại token cũ
+  Alert.alert("Lỗi", "Không nhận được token từ máy chủ!");
+}
+
       
         // Điều hướng không cần truyền token nữa
         navigation.navigate("MessageScreen");
@@ -60,7 +67,7 @@ const LoginScreen = ({ navigation }) => {
 
   return (
     <View style={tw`flex-1 bg-white justify-center items-center px-6`}>
-      <Text style={tw`text-blue-600 text-5xl font-bold mb-12`}>Zalo</Text>
+      <Text style={tw`text-blue-600 text-5xl font-bold mb-12`}>ChatAlo</Text>
 
       {/* Email */}
       <TextInput

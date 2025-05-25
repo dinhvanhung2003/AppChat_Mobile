@@ -13,8 +13,9 @@ import tw from "twrnc";
 
 import { Picker } from "@react-native-picker/picker";
 import DateTimePicker from "@react-native-community/datetimepicker";
-const API_URL = 'http://192.168.1.12:5000'; 
+const API_URL = 'http://192.168.1.6:5000';
 const SignupScreen = ({ navigation }) => {
+  // khai bao state
   const [fullName, setFullName] = useState("");
   const [email, setEmail] = useState("");
   const [password, setPassword] = useState("");
@@ -23,7 +24,7 @@ const SignupScreen = ({ navigation }) => {
   const [gender, setGender] = useState("male");
   const [dateOfBirth, setDateOfBirth] = useState(new Date());
   const [showDatePicker, setShowDatePicker] = useState(false);
-
+  // xu ly dang ky
   const handleSignup = async () => {
     if (!fullName || !email || !password || !confirmPassword || !gender || !dateOfBirth) {
       Alert.alert("Lỗi", "Vui lòng nhập đầy đủ thông tin bắt buộc!");
@@ -82,7 +83,7 @@ const SignupScreen = ({ navigation }) => {
           phoneNumber,
           gender,
           dateOfBirth: dateOfBirth.toISOString().split("T")[0],
-          avatar: "", // backend sẽ dùng default
+          avatar: "",
         }),
       });
 
@@ -93,13 +94,24 @@ const SignupScreen = ({ navigation }) => {
         return;
       }
 
-      Alert.alert("✅ Thành công", "Đăng ký thành công, vui lòng đăng nhập.");
-      navigation.navigate("Login");
+      // Chuyển sang màn hình OTP
+      navigation.navigate("OtpVeficationScreen", {
+        signupData: {
+          fullName,
+          email,
+          password,
+          phoneNumber,
+          gender,
+          dateOfBirth: dateOfBirth.toISOString().split("T")[0],
+        },
+      });
     } catch (error) {
       Alert.alert("Lỗi kết nối", error.message);
     }
   };
 
+
+  // giao dien dang ky
   return (
     <ScrollView contentContainerStyle={tw`flex-1 bg-white`}>
       <View style={tw`flex-1 justify-center px-6 py-12`}>

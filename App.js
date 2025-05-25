@@ -18,6 +18,7 @@ import ChatSceen from './components/MessageScreen/ChatScreen';
 import GroupListScreen from './components/MessageScreen/GroupListScreen';
 import GroupCreateScreen from './components/MessageScreen/GroupCreateScreen';
 import GroupDetailScreen from './components/MessageScreen/GroupDetailScreen';
+import OtpVeficationScreen from './components/SignUp/OtpVerficationScreen';
 const Stack = createStackNavigator();
 
 export default function App() {
@@ -41,6 +42,7 @@ export default function App() {
         <Stack.Screen name="GroupListScreen" component={GroupListScreen} />
         <Stack.Screen name="GroupCreateScreen" component={GroupCreateScreen} />
         <Stack.Screen name="GroupDetailScreen" component={GroupDetailScreen} />
+        <Stack.Screen name="OtpVeficationScreen" component={OtpVeficationScreen} />
       </Stack.Navigator>
     </NavigationContainer>
   );

@@ -12,7 +12,7 @@ import { useNavigation } from '@react-navigation/native';
 import NavigationBar from '../../components/MessageScreen/NavigationBar';
 import SearchBar from '../SearchBar/index';
 
-const API_URL = 'http://192.168.1.6:5000';
+const API_URL = 'http://172.20.10.5:5000';
 const socket = io(API_URL, { transports: ['websocket'] });
 
 const PhoneBook = () => {
@@ -34,25 +34,28 @@ const PhoneBook = () => {
         const decoded = jwtDecode(storedToken);
         const userId = decoded.id;
         setCurrentUserId(userId);
-
         socket.emit('setup', userId);
-
-        socket.on('friendRequestReceived', (data) => {
-          if (!data?.sender?._id) return;
-          setFriendRequests((prev) => {
-            const exists = prev.some((u) => u._id === data.sender._id);
-            return exists ? prev : [...prev, data.sender];
-          });
-        });
-
-        socket.on('friendRequestAccepted', ({ sender }) => {
-          setContacts((prev) => [...prev, sender]);
-          Alert.alert('🤝', `Bạn vừa kết bạn với ${sender.fullName}`);
-        });
+        fetchFriends(storedToken);
       }
     };
 
     init();
+  }, []);
+
+  useEffect(() => {
+    socket.on('friendRequestReceived', (data) => {
+      console.log('📥 friendRequestReceived:', data);
+      if (!data?.sender?._id) return;
+      setFriendRequests((prev) => {
+        const exists = prev.some((u) => u._id === data.sender._id);
+        return exists ? prev : [...prev, data.sender];
+      });
+    });
+
+    socket.on('friendRequestAccepted', ({ sender }) => {
+      setContacts((prev) => [...prev, sender]);
+      Alert.alert('🤝', `Bạn vừa kết bạn với ${sender.fullName}`);
+    });
 
     return () => {
       socket.off('friendRequestReceived');
@@ -60,21 +63,17 @@ const PhoneBook = () => {
     };
   }, []);
 
-  useEffect(() => {
-    const fetchFriends = async () => {
-      try {
-        if (!token) return;
-        const res = await axios.get(`${API_URL}/users/listFriends`, {
-          headers: { Authorization: `Bearer ${token}` },
-        });
-        setContacts(Array.isArray(res.data) ? res.data : []);
-      } catch (err) {
-        console.error('Lỗi lấy danh sách bạn bè:', err);
-        setContacts([]);
-      }
-    };
-    fetchFriends();
-  }, [token]);
+  const fetchFriends = async (storedToken) => {
+    try {
+      const res = await axios.get(`${API_URL}/users/listFriends`, {
+        headers: { Authorization: `Bearer ${storedToken}` },
+      });
+      setContacts(Array.isArray(res.data) ? res.data : []);
+    } catch (err) {
+      console.error('Lỗi lấy danh sách bạn bè:', err);
+      setContacts([]);
+    }
+  };
 
   const handleSearch = async () => {
     try {
@@ -87,7 +86,7 @@ const PhoneBook = () => {
     }
   };
 
-  const sendFriendRequest = (receiverId) => {
+  const sendFriendRequest = async (receiverId) => {
     socket.emit('sendFriendRequest', {
       senderId: currentUserId,
       receiverId,
@@ -209,8 +208,8 @@ const PhoneBook = () => {
           >
             <Text
               style={tw`text-center p-4 ${activeTab === tab
-                  ? 'border-b-2 border-blue-500 text-blue-500 font-bold'
-                  : 'text-gray-600'
+                ? 'border-b-2 border-blue-500 text-blue-500 font-bold'
+                : 'text-gray-600'
                 }`}
             >
               {tab}
@@ -245,7 +244,7 @@ const PhoneBook = () => {
       )}
 
       {/* Danh bạ */}
-     <FlatList
+      <FlatList
   data={Object.keys(groupedContacts)}
   keyExtractor={(letter) => `section_${letter}`}
   renderItem={({ item: letter }) => (
@@ -254,7 +253,8 @@ const PhoneBook = () => {
       <FlatList
         data={groupedContacts[letter]}
         renderItem={renderItem}
-        keyExtractor={(contact, index) => `${contact._id}_${index}`} // 👈 đảm bảo key duy nhất
+        keyExtractor={(contact, index) => `${letter}_${contact._id || index}`}
+        scrollEnabled={false} // 👈 tránh scroll xung đột khi nested
       />
     </View>
   )}
