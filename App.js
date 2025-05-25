@@ -14,6 +14,12 @@ import VerifyOtpScreen from './components/LogIn/VerifyOTP';
 import ResetPasswordScreen from './components/LogIn/ResetPasswordScreen';
 import ChangePass from './components/ProfileScreen/ChangePassword';
 import EditProfile from './components/ProfileScreen/EditProfile';
+import ChatSceen from './components/MessageScreen/ChatScreen';
+import GroupListScreen from './components/MessageScreen/GroupListScreen';
+import GroupCreateScreen from './components/MessageScreen/GroupCreateScreen';
+import GroupDetailScreen from './components/MessageScreen/GroupDetailScreen';
+import OtpVeficationScreen from './components/SignUp/OtpVerficationScreen';
+import OtpLoginScreen from './components/LogIn/OtpLoginScreen';
 const Stack = createStackNavigator();
 
 export default function App() {
@@ -28,11 +34,17 @@ export default function App() {
         <Stack.Screen name="ResetPasswordScreen" component={ResetPasswordScreen} />
         <Stack.Screen name="ChangePass" component={ChangePass} />
         <Stack.Screen name="EditProfile" component={EditProfile} />
+        <Stack.Screen name="ChatScreen" component={ChatSceen} />
         <Stack.Screen name="PhoneBook" component={PhoneBook} />
         <Stack.Screen name="ExploreScreen" component={ExploreScreen} />
         <Stack.Screen name="NewScreen" component={NewScreen} />
         <Stack.Screen name="ProfileScreen" component={ProfileScreen} />
         <Stack.Screen name="Login" component={Login} />
+        <Stack.Screen name="GroupListScreen" component={GroupListScreen} />
+        <Stack.Screen name="GroupCreateScreen" component={GroupCreateScreen} />
+        <Stack.Screen name="GroupDetailScreen" component={GroupDetailScreen} />
+        <Stack.Screen name="OtpVeficationScreen" component={OtpVeficationScreen} />
+        <Stack.Screen name="OtpLoginScreen" component={OtpLoginScreen} />
       </Stack.Navigator>
     </NavigationContainer>
   );

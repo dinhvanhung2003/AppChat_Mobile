@@ -8,9 +8,7 @@ import {
 } from "react-native";
 import AsyncStorage from "@react-native-async-storage/async-storage";
 import tw from "twrnc";
-
-const API_URL = "http://192.168.1.6:5000";
-
+const API_URL = 'http://192.168.1.6:5000';
 const LoginScreen = ({ navigation }) => {
   const [email, setEmail] = useState("");
   const [password, setPassword] = useState("");
@@ -19,6 +17,19 @@ const LoginScreen = ({ navigation }) => {
   const handleLogin = async () => {
     if (!email || !password) {
       Alert.alert("Lỗi", "Vui lòng nhập email và mật khẩu!");
+      return;
+    }
+
+    const emailRegex = /^[^\s@]+@[^\s@]+\.[^\s@]+$/;
+    const passwordRegex = /^.{8,}$/;
+
+    if (!emailRegex.test(email)) {
+      Alert.alert("Lỗi", "Email không hợp lệ!");
+      return;
+    }
+
+    if (!passwordRegex.test(password)) {
+      Alert.alert("Lỗi", "Mật khẩu phải có ít nhất 8 ký tự!");
       return;
     }
 
@@ -32,8 +43,19 @@ const LoginScreen = ({ navigation }) => {
       const data = await response.json();
 
       if (response.ok) {
-        await AsyncStorage.setItem("user", JSON.stringify(data));
-        navigation.navigate("ProfileScreen", { user: data });
+        // Lưu token và user riêng biệt
+        if (response.ok && data.user?.token) {
+          await AsyncStorage.setItem("token", data.user.token);
+          await AsyncStorage.setItem("user", JSON.stringify(data.user));
+          navigation.navigate("MessageScreen");
+        } else {
+          Alert.alert("Lỗi", "Đăng nhập thất bại hoặc không nhận được token.");
+        }
+
+
+
+        // Điều hướng không cần truyền token nữa
+        navigation.navigate("MessageScreen");
       } else {
         Alert.alert("Lỗi", data.error || "Đăng nhập thất bại!");
       }
@@ -42,9 +64,10 @@ const LoginScreen = ({ navigation }) => {
     }
   };
 
+
   return (
     <View style={tw`flex-1 bg-white justify-center items-center px-6`}>
-      <Text style={tw`text-blue-600 text-5xl font-bold mb-12`}>Zalo</Text>
+      <Text style={tw`text-blue-600 text-5xl font-bold mb-12`}>ChatAlo</Text>
 
       {/* Email */}
       <TextInput
@@ -84,6 +107,38 @@ const LoginScreen = ({ navigation }) => {
       >
         <Text style={tw`text-white text-center text-base font-semibold`}>
           ĐĂNG NHẬP VỚI MẬT KHẨU
+        </Text>
+      </TouchableOpacity>
+      <TouchableOpacity
+        style={tw`border border-blue-600 w-full py-3 rounded-xl mb-4`}
+        onPress={async () => {
+          if (!email) {
+            Alert.alert("Lỗi", "Vui lòng nhập email để nhận mã OTP");
+            return;
+          }
+
+          try {
+            const response = await fetch(`${API_URL}/users/signin-otp`, {
+              method: "POST",
+              headers: { "Content-Type": "application/json" },
+              body: JSON.stringify({ email }),
+            });
+
+            const data = await response.json();
+
+            if (response.ok) {
+              Alert.alert("✅", "Mã OTP đã được gửi đến email");
+              navigation.navigate("OtpLoginScreen", { email });
+            } else {
+              Alert.alert("Lỗi", data.error || "Không thể gửi mã OTP");
+            }
+          } catch (error) {
+            Alert.alert("Lỗi kết nối", error.message);
+          }
+        }}
+      >
+        <Text style={tw`text-blue-600 text-center text-base font-semibold`}>
+          ĐĂNG NHẬP BẰNG OTP
         </Text>
       </TouchableOpacity>
 
