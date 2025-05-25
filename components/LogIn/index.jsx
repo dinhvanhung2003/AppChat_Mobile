@@ -109,6 +109,38 @@ const LoginScreen = ({ navigation }) => {
           ĐĂNG NHẬP VỚI MẬT KHẨU
         </Text>
       </TouchableOpacity>
+      <TouchableOpacity
+        style={tw`border border-blue-600 w-full py-3 rounded-xl mb-4`}
+        onPress={async () => {
+          if (!email) {
+            Alert.alert("Lỗi", "Vui lòng nhập email để nhận mã OTP");
+            return;
+          }
+
+          try {
+            const response = await fetch(`${API_URL}/users/signin-otp`, {
+              method: "POST",
+              headers: { "Content-Type": "application/json" },
+              body: JSON.stringify({ email }),
+            });
+
+            const data = await response.json();
+
+            if (response.ok) {
+              Alert.alert("✅", "Mã OTP đã được gửi đến email");
+              navigation.navigate("OtpLoginScreen", { email });
+            } else {
+              Alert.alert("Lỗi", data.error || "Không thể gửi mã OTP");
+            }
+          } catch (error) {
+            Alert.alert("Lỗi kết nối", error.message);
+          }
+        }}
+      >
+        <Text style={tw`text-blue-600 text-center text-base font-semibold`}>
+          ĐĂNG NHẬP BẰNG OTP
+        </Text>
+      </TouchableOpacity>
 
       {/* Quên mật khẩu */}
       <TouchableOpacity onPress={() => navigation.navigate("ForgotPassword")}>
