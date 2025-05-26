@@ -41,6 +41,57 @@ const PhoneBook = () => {
 
     init();
   }, []);
+  // useEffect(() => {
+  //   const fetchPendingRequests = async () => {
+  //     if (!token) return;
+
+  //     try {
+  //       const res = await axios.get(`${API_URL}/api/friendRequests/pending`, {
+  //         headers: { Authorization: `Bearer ${token}` },
+  //       });
+
+  //       if (Array.isArray(res.data)) {
+  //         setFriendRequests(res.data);
+  //       } else {
+  //         console.warn("⚠️ Kết quả không phải mảng:", res.data);
+  //         setFriendRequests([]);
+  //       }
+  //     } catch (err) {
+  //       console.error('❌ Lỗi fetch lời mời:', err?.response?.data || err.message);
+  //       Alert.alert("Lỗi", "Không thể tải danh sách lời mời kết bạn");
+  //       setFriendRequests([]); // fallback tránh treo UI
+  //     }
+  //   };
+
+  //   fetchPendingRequests();
+  // }, [token]);
+
+useEffect(() => {
+  if (!searchQuery.trim()) {
+    setSentRequests([]);
+  }
+}, [searchQuery]);
+const isAlreadySent = (userId) => {
+  return (
+    sentRequests.includes(userId) ||
+    friendRequests.some((u) => u._id === userId) ||
+    contacts.some((u) => u._id === userId)
+  );
+};
+useEffect(() => {
+  const fetchPending = async () => {
+    try {
+      const res = await axios.get(`${API_URL}/api/friendRequests/pending`, {
+        headers: { Authorization: `Bearer ${token}` },
+      });
+      setFriendRequests(res.data || []);
+    } catch (err) {
+      console.error("Lỗi fetch pending:", err);
+    }
+  };
+
+  if (token) fetchPending();
+}, [token]);
 
   useEffect(() => {
     socket.on('friendRequestReceived', (data) => {
@@ -172,28 +223,29 @@ const PhoneBook = () => {
         <Text style={tw`text-white text-center font-semibold`}>Tìm bạn</Text>
       </TouchableOpacity>
 
-      {results.length > 0 && (
-        <>
-          <Text style={tw`text-lg font-semibold mx-4 mb-2`}>Kết quả:</Text>
-          {results.map((item) => {
-            const alreadySent = sentRequests.includes(item._id);
-            return (
-              <View key={item._id} style={tw`mx-4 mb-2 p-2 border rounded flex-row justify-between items-center`}>
-                <Text>{item.fullName || item.email}</Text>
-                <TouchableOpacity
-                  disabled={alreadySent}
-                  style={tw`px-3 py-1 rounded ${alreadySent ? 'bg-gray-400' : 'bg-green-500'}`}
-                  onPress={() => sendFriendRequest(item._id)}
-                >
-                  <Text style={tw`text-white`}>
-                    {alreadySent ? 'Đã gửi' : 'Kết bạn'}
-                  </Text>
-                </TouchableOpacity>
-              </View>
-            );
-          })}
-        </>
-      )}
+      {results.map((item) => {
+  const alreadySent = isAlreadySent(item._id);
+
+  return (
+    <View
+      key={item._id}
+      style={tw`mx-4 mb-2 p-2 border rounded flex-row justify-between items-center`}
+    >
+      <Text>{item.fullName || item.email}</Text>
+      <TouchableOpacity
+        disabled={alreadySent}
+        style={tw`px-3 py-1 rounded ${alreadySent ? 'bg-gray-400' : 'bg-green-500'}`}
+        onPress={() => sendFriendRequest(item._id)}
+      >
+        <Text style={tw`text-white`}>
+          {alreadySent ? 'Đã gửi' : 'Kết bạn'}
+        </Text>
+      </TouchableOpacity>
+    </View>
+  );
+})}
+
+
 
       {/* Tabs */}
       <View style={tw`flex-row justify-around border-b`}>
@@ -245,20 +297,20 @@ const PhoneBook = () => {
 
       {/* Danh bạ */}
       <FlatList
-  data={Object.keys(groupedContacts)}
-  keyExtractor={(letter) => `section_${letter}`}
-  renderItem={({ item: letter }) => (
-    <View key={`section_${letter}`}>
-      <Text style={tw`bg-gray-200 p-2 text-gray-600 font-bold`}>{letter}</Text>
-      <FlatList
-        data={groupedContacts[letter]}
-        renderItem={renderItem}
-        keyExtractor={(contact, index) => `${letter}_${contact._id || index}`}
-        scrollEnabled={false} // 👈 tránh scroll xung đột khi nested
+        data={Object.keys(groupedContacts)}
+        keyExtractor={(letter) => `section_${letter}`}
+        renderItem={({ item: letter }) => (
+          <View key={`section_${letter}`}>
+            <Text style={tw`bg-gray-200 p-2 text-gray-600 font-bold`}>{letter}</Text>
+            <FlatList
+              data={groupedContacts[letter]}
+              renderItem={renderItem}
+              keyExtractor={(contact, index) => `${letter}_${contact._id || index}`}
+              scrollEnabled={false} // 👈 tránh scroll xung đột khi nested
+            />
+          </View>
+        )}
       />
-    </View>
-  )}
-/>
 
       <View style={tw`absolute bottom-0 w-full`}>
         <NavigationBar activeTab="Contacts" />

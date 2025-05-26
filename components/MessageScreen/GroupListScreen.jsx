@@ -87,9 +87,17 @@ const GroupListScreen = () => {
       onPress={() => handleSelectGroup(item)}
       style={tw`flex-row items-center p-4 bg-white border-b border-gray-200`}
     >
-      <View style={tw`w-12 h-12 bg-blue-200 rounded-full items-center justify-center`}>
-        <Ionicons name="people" size={24} color="#2563EB" />
-      </View>
+     {item.groupAvatar ? (
+  <Image
+    source={{ uri: item.groupAvatar }}
+    style={tw`w-12 h-12 rounded-full`}
+  />
+) : (
+  <View style={tw`w-12 h-12 bg-blue-200 rounded-full items-center justify-center`}>
+    <Ionicons name="people" size={24} color="#2563EB" />
+  </View>
+)}
+
       <View style={tw`ml-4 flex-1`}>
         <Text style={tw`text-base font-semibold text-black`}>{item.chatName}</Text>
         <Text style={tw`text-sm text-gray-500`}>{item.users.length} thành viên</Text>

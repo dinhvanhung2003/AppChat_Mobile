@@ -8,7 +8,9 @@ import { useRoute, useNavigation } from '@react-navigation/native';
 import { jwtDecode } from 'jwt-decode';
 import { io } from 'socket.io-client';
 import tw from 'twrnc';
-
+import * as ImagePicker from 'expo-image-picker';
+import * as FileSystem from 'expo-file-system';
+import { Image } from 'react-native';
 const API_URL = 'http://192.168.1.6:5000';
 const socket = io(API_URL, { transports: ['websocket'] });
 
@@ -45,6 +47,77 @@ const GroupDetailScreen = () => {
       Alert.alert('Lỗi', 'Không thể tìm kiếm người dùng.');
     }
   };
+  // sua anh 
+const handleChangeGroupAvatar = async () => {
+  try {
+    const result = await ImagePicker.launchImageLibraryAsync({
+  mediaTypes: ImagePicker.MediaTypeOptions.Images, // ✅ dùng lại MediaTypeOptions.Images
+  allowsEditing: true,
+  quality: 1,
+});
+
+
+    if (result.canceled) return;
+
+    const image = result.assets[0];
+    const uri = image.uri;
+
+    if (!uri.startsWith("file://")) {
+      Alert.alert("❌ Lỗi ảnh", "Chỉ hỗ trợ ảnh từ thiết bị");
+      return;
+    }
+
+    const filename = uri.split("/").pop();
+    const ext = filename.split(".").pop();
+    const mimeType = `image/${ext}`;
+
+    const formData = new FormData();
+    formData.append("chatId", groupData._id);
+    formData.append("avatar", {
+      uri,
+      name: filename,
+      type: mimeType,
+    });
+
+    const token = await AsyncStorage.getItem("token");
+
+    const response = await fetch(`${API_URL}/api/chat/group/avatar`, {
+      method: "PUT",
+      headers: {
+        Authorization: `Bearer ${token}`,
+        // "Content-Type": "multipart/form-data", // ✅ Giống update user
+      },
+      body: formData,
+    });
+
+    const data = await response.json();
+
+    if (response.ok) {
+      setGroupData(data);
+      Alert.alert("✅ Thành công", "Ảnh nhóm đã được cập nhật!");
+    } else {
+      console.error("❌ Upload thất bại:", data);
+      Alert.alert("❌ Lỗi", data.message || "Không thể cập nhật ảnh nhóm");
+    }
+  } catch (err) {
+    console.error("❌ Lỗi upload ảnh:", err);
+    Alert.alert("Lỗi mạng", err.message || "Không thể kết nối server");
+  }
+};
+
+
+
+
+
+
+
+
+
+
+
+
+
+
 
   useEffect(() => {
     const init = async () => {
@@ -62,11 +135,11 @@ const GroupDetailScreen = () => {
     };
     init();
   }, []);
-useEffect(() => {
-  if (!searchText.trim()) {
-    setSearchResults([]);
-  }
-}, [searchText]);
+  useEffect(() => {
+    if (!searchText.trim()) {
+      setSearchResults([]);
+    }
+  }, [searchText]);
 
   useEffect(() => {
     socket.emit('setup', userId);
@@ -233,13 +306,26 @@ useEffect(() => {
     }
   }, [selectedFriends]);
 
-const mergedUsers = [
-  ...(Array.isArray(searchResults) ? searchResults : []),
-  ...(Array.isArray(friends) ? friends : []),
-];
+  const mergedUsers = [
+    ...(Array.isArray(searchResults) ? searchResults : []),
+    ...(Array.isArray(friends) ? friends : []),
+  ];
   return (
     <View style={tw`flex-1 bg-gray-100 pt-10 px-4`}>
       <Text style={tw`text-xl font-bold mb-4`}>Chi tiết nhóm</Text>
+      {groupData.groupAvatar ? (
+  <Image
+    source={{ uri: groupData.groupAvatar }}
+    style={tw`w-24 h-24 rounded-full self-center mb-3`}
+  />
+) : (
+  <View style={tw`w-24 h-24 rounded-full bg-gray-300 self-center mb-3`} />
+)}
+
+<TouchableOpacity onPress={handleChangeGroupAvatar} style={tw`mb-4`}>
+  <Text style={tw`text-blue-600 text-center`}>🖼️ Đổi ảnh nhóm</Text>
+</TouchableOpacity>
+
 
       <TextInput
         value={newName}
@@ -327,26 +413,26 @@ const mergedUsers = [
             showsVerticalScrollIndicator={false}
           />
 
-         {selectedFriends.map((id) => {
-  const user = mergedUsers.find((u) => u._id === id);
-  if (!user) return null;
+          {selectedFriends.map((id) => {
+            const user = mergedUsers.find((u) => u._id === id);
+            if (!user) return null;
 
-  return (
-    <View
-      key={user._id}
-      style={tw`flex-row items-center bg-blue-100 px-3 py-1 rounded-full mr-2 mb-2`}
-    >
-      <Text style={tw`text-sm text-blue-800 mr-1`}>{user.fullName}</Text>
-      <TouchableOpacity
-        onPress={() =>
-          setSelectedFriends((prev) => prev.filter((uid) => uid !== user._id))
-        }
-      >
-        <Text style={tw`text-blue-600 text-xs`}>✕</Text>
-      </TouchableOpacity>
-    </View>
-  );
-})}
+            return (
+              <View
+                key={user._id}
+                style={tw`flex-row items-center bg-blue-100 px-3 py-1 rounded-full mr-2 mb-2`}
+              >
+                <Text style={tw`text-sm text-blue-800 mr-1`}>{user.fullName}</Text>
+                <TouchableOpacity
+                  onPress={() =>
+                    setSelectedFriends((prev) => prev.filter((uid) => uid !== user._id))
+                  }
+                >
+                  <Text style={tw`text-blue-600 text-xs`}>✕</Text>
+                </TouchableOpacity>
+              </View>
+            );
+          })}
 
 
 

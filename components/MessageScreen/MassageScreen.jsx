@@ -176,9 +176,10 @@ const MessageListScreen = () => {
     const isGroupChat = item.isGroupChat;
     const otherUser = item.users?.find((u) => u._id !== currentUserId);
     const displayName = isGroupChat ? item.chatName : otherUser?.fullName || 'Không rõ';
-    const displayAvatar = isGroupChat
-      ? 'https://cdn-icons-png.flaticon.com/512/74/74472.png'
-      : otherUser?.avatar || 'https://via.placeholder.com/150';
+   const displayAvatar = isGroupChat
+  ? item.groupAvatar || 'https://cdn-icons-png.flaticon.com/512/74/74472.png'
+  : otherUser?.avatar || 'https://via.placeholder.com/150';
+
 
     return (
       <TouchableOpacity
