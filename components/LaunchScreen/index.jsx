@@ -5,7 +5,7 @@ import tw from 'twrnc';
 export default function LaunchScreen({ navigation }) {
   return (
     <View style={tw`flex-1 justify-center items-center bg-white`}>
-      <Text style={tw`text-4xl font-bold text-blue-500 mb-12`}>Zalo</Text>
+      <Text style={tw`text-4xl font-bold text-blue-500 mb-12`}>ChatAlo</Text>
 
       {/* Nút Đăng nhập */}
       <TouchableOpacity 

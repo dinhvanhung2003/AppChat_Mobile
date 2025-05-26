@@ -211,10 +211,13 @@ const MessageListScreen = () => {
             </Text>
           </View>
           <Text style={tw`text-gray-600`} numberOfLines={1}>
-            {item.latestMessage?.isRecalled
-              ? '[Đã thu hồi]'
-              : item.latestMessage?.content || '[Tệp đính kèm]'}
-          </Text>
+  {item.latestMessage?.isRecalled
+    ? '[Đã thu hồi]'
+    : item.latestMessage?.content
+      ? item.latestMessage.content
+      : `[${item.latestMessage?.type?.toUpperCase() || 'Tin nhắn'}]`}
+</Text>
+
         </View>
       </TouchableOpacity>
     );

@@ -9,7 +9,7 @@ import { jwtDecode } from 'jwt-decode';
 import { io } from 'socket.io-client';
 import tw from 'twrnc';
 
-const API_URL = 'http://172.20.10.5:5000';
+const API_URL = 'http://192.168.1.6:5000';
 const socket = io(API_URL, { transports: ['websocket'] });
 
 const GroupDetailScreen = () => {
@@ -24,6 +24,27 @@ const GroupDetailScreen = () => {
   const [newName, setNewName] = useState(group.chatName);
   const [friends, setFriends] = useState([]);
   const [selectedFriends, setSelectedFriends] = useState([]);
+  const [searchText, setSearchText] = useState('');
+  const [searchResults, setSearchResults] = useState([]);
+  const handleSearch = async () => {
+    if (!searchText.trim()) return;
+
+    try {
+      const res = await axios.get(`${API_URL}/users?search=${searchText}`, {
+        headers: { Authorization: `Bearer ${token}` },
+      });
+
+      // lọc bỏ người đã trong nhóm
+      const available = (Array.isArray(res.data) ? res.data : res.data.users || []).filter(
+        (u) => !groupUsers.some((member) => member._id === u._id)
+      );
+
+      setSearchResults(available);
+    } catch (err) {
+      console.error('❌ Lỗi tìm kiếm:', err.response?.data || err.message);
+      Alert.alert('Lỗi', 'Không thể tìm kiếm người dùng.');
+    }
+  };
 
   useEffect(() => {
     const init = async () => {
@@ -41,6 +62,11 @@ const GroupDetailScreen = () => {
     };
     init();
   }, []);
+useEffect(() => {
+  if (!searchText.trim()) {
+    setSearchResults([]);
+  }
+}, [searchText]);
 
   useEffect(() => {
     socket.emit('setup', userId);
@@ -116,6 +142,8 @@ const GroupDetailScreen = () => {
       );
       socket.emit('group:updated', res.data);
       setSelectedFriends([]);
+      Alert.alert('✅ Thành công', 'Đã thêm thành viên vào nhóm!');
+
     } catch (err) {
       console.error('Lỗi thêm thành viên:', err);
     }
@@ -183,7 +211,32 @@ const GroupDetailScreen = () => {
       },
     ]);
   };
+  const filteredSearchResults = Array.isArray(searchResults)
+    ? searchResults.filter(
+      (u) =>
+        !selectedFriends.includes(u._id) &&
+        !groupUsers.some((g) => g._id === u._id)
+    )
+    : [];
 
+  const availableFriends = Array.isArray(friends)
+    ? friends.filter(
+      (f) =>
+        !groupUsers.some((g) => g._id === f._id) &&
+        !selectedFriends.includes(f._id)
+    )
+    : [];
+  useEffect(() => {
+    if (selectedFriends.length > 0) {
+      setSearchResults([]); // dọn kết quả cũ
+      setSearchText('');
+    }
+  }, [selectedFriends]);
+
+const mergedUsers = [
+  ...(Array.isArray(searchResults) ? searchResults : []),
+  ...(Array.isArray(friends) ? friends : []),
+];
   return (
     <View style={tw`flex-1 bg-gray-100 pt-10 px-4`}>
       <Text style={tw`text-xl font-bold mb-4`}>Chi tiết nhóm</Text>
@@ -231,26 +284,71 @@ const GroupDetailScreen = () => {
       {isAdmin && (
         <>
           <Text style={tw`font-semibold mt-6 mb-2`}>Thêm thành viên:</Text>
+
+          <View style={tw`flex-row items-center bg-white px-3 py-2 rounded border mb-3`}>
+            <TextInput
+              value={searchText}
+              onChangeText={setSearchText}
+              onSubmitEditing={handleSearch}
+              placeholder="Tìm người dùng để thêm"
+              style={tw`flex-1 text-black`}
+            />
+            <TouchableOpacity onPress={handleSearch}>
+              <Text style={tw`text-blue-600 font-semibold ml-2`}>Tìm</Text>
+            </TouchableOpacity>
+          </View>
+
           <FlatList
-            data={friends}
+            data={filteredSearchResults.length > 0 ? filteredSearchResults : availableFriends}
             keyExtractor={(item) => item._id}
             renderItem={({ item }) => (
               <TouchableOpacity
                 onPress={() => {
-                  setSelectedFriends((prev) =>
-                    prev.includes(item._id)
-                      ? prev.filter((id) => id !== item._id)
-                      : [...prev, item._id]
-                  );
+                  setSelectedFriends((prev) => [...prev, item._id]);
                 }}
-                style={tw`flex-row justify-between items-center p-2 bg-white border-b`}
+                style={tw`flex-row items-center justify-between p-3 bg-white border-b`}
               >
-                <Text>{item.fullName}</Text>
-                {selectedFriends.includes(item._id) && <Text>✅</Text>}
+                <View style={tw`flex-row items-center`}>
+                  <View style={tw`w-10 h-10 rounded-full bg-gray-300 mr-3`} />
+                  <Text>{item.fullName}</Text>
+                </View>
+                <Text style={tw`text-green-600 text-lg`}>➕</Text>
               </TouchableOpacity>
             )}
-            style={tw`max-h-52`}
+            ListEmptyComponent={() => (
+              <Text style={tw`text-center text-gray-500 mt-2`}>
+                {searchText.trim()
+                  ? 'Không tìm thấy người dùng phù hợp.'
+                  : 'Không còn bạn bè nào để thêm.'}
+              </Text>
+            )}
+            style={tw`max-h-60 rounded overflow-hidden`}
+            contentContainerStyle={tw`border rounded`}
+            showsVerticalScrollIndicator={false}
           />
+
+         {selectedFriends.map((id) => {
+  const user = mergedUsers.find((u) => u._id === id);
+  if (!user) return null;
+
+  return (
+    <View
+      key={user._id}
+      style={tw`flex-row items-center bg-blue-100 px-3 py-1 rounded-full mr-2 mb-2`}
+    >
+      <Text style={tw`text-sm text-blue-800 mr-1`}>{user.fullName}</Text>
+      <TouchableOpacity
+        onPress={() =>
+          setSelectedFriends((prev) => prev.filter((uid) => uid !== user._id))
+        }
+      >
+        <Text style={tw`text-blue-600 text-xs`}>✕</Text>
+      </TouchableOpacity>
+    </View>
+  );
+})}
+
+
 
           <TouchableOpacity
             onPress={handleAddMembers}
