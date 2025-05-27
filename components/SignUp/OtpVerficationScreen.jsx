@@ -3,7 +3,7 @@ import { View, Text, TextInput, Alert, TouchableOpacity } from "react-native";
 import tw from "twrnc";
 import { Button } from "react-native-paper";
 
-const API_URL = "http://192.168.1.6:5000";
+const API_URL = "http://192.168.88.179:5000";
 
 const OtpVerificationScreen = ({ route, navigation }) => {
   const { signupData } = route.params;

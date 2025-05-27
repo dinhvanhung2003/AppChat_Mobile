@@ -3,7 +3,7 @@ import { View, TextInput, TouchableOpacity, Text, Alert } from 'react-native';
 import { signInWithEmailAndPassword, updatePassword } from 'firebase/auth';
 import { FIREBASE_AUTH } from '../../configs/fireBaseConfig'; // đường dẫn đúng file config
 
-const API_URL = 'http://192.168.1.6:5000';
+const API_URL = 'http://192.168.88.179:5000';
 
 const ResetPasswordScreen = ({ route, navigation }) => {
   const { email, otp } = route.params;

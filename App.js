@@ -20,6 +20,7 @@ import GroupCreateScreen from './components/MessageScreen/GroupCreateScreen';
 import GroupDetailScreen from './components/MessageScreen/GroupDetailScreen';
 import OtpVeficationScreen from './components/SignUp/OtpVerficationScreen';
 import OtpLoginScreen from './components/LogIn/OtpLoginScreen';
+import ImageViewerScreen from './components/MessageScreen/ImageViewerScreen';
 const Stack = createStackNavigator();
 
 export default function App() {
@@ -45,6 +46,7 @@ export default function App() {
         <Stack.Screen name="GroupDetailScreen" component={GroupDetailScreen} />
         <Stack.Screen name="OtpVeficationScreen" component={OtpVeficationScreen} />
         <Stack.Screen name="OtpLoginScreen" component={OtpLoginScreen} />
+        <Stack.Screen name="ImageViewer" component={ImageViewerScreen} />
       </Stack.Navigator>
     </NavigationContainer>
   );

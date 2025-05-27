@@ -12,7 +12,7 @@ import { useNavigation } from '@react-navigation/native';
 import NavigationBar from '../../components/MessageScreen/NavigationBar';
 import SearchBar from '../SearchBar/index';
 
-const API_URL = 'http://192.168.1.6:5000';
+const API_URL = 'http://192.168.88.179:5000';
 const socket = io(API_URL, { transports: ['websocket'] });
 
 const PhoneBook = () => {

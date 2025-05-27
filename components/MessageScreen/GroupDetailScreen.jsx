@@ -11,7 +11,7 @@ import tw from 'twrnc';
 import * as ImagePicker from 'expo-image-picker';
 import * as FileSystem from 'expo-file-system';
 import { Image } from 'react-native';
-const API_URL = 'http://192.168.1.6:5000';
+const API_URL = 'http://192.168.88.179:5000';
 const socket = io(API_URL, { transports: ['websocket'] });
 
 const GroupDetailScreen = () => {
