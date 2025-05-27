@@ -11,7 +11,7 @@ import { io } from 'socket.io-client';
 import { useNavigation } from '@react-navigation/native';
 import NavigationBar from '../../components/MessageScreen/NavigationBar';
 import SearchBar from '../SearchBar/index';
-
+import { Swipeable } from 'react-native-gesture-handler';
 const API_URL = 'http://192.168.1.6:5000';
 const socket = io(API_URL, { transports: ['websocket'] });
 
@@ -65,6 +65,38 @@ const PhoneBook = () => {
 
   //   fetchPendingRequests();
   // }, [token]);
+
+
+// Xoa ban be 
+const handleRemoveFriend = (friendId, fullName) => {
+  Alert.alert(
+    'Xóa bạn bè',
+    `Bạn có chắc muốn xóa ${fullName} khỏi danh sách bạn bè?`,
+    [
+      { text: 'Huỷ', style: 'cancel' },
+      {
+        text: 'Xóa',
+        onPress: async () => {
+          try {
+            await axios.put(
+              `${API_URL}/users/removeFriend`,
+              { friendId },
+              { headers: { Authorization: `Bearer ${token}` } }
+            );
+            setContacts((prev) => prev.filter((u) => u._id !== friendId));
+            Alert.alert('✅ Thành công', `${fullName} đã bị xoá khỏi danh sách bạn bè.`);
+          } catch (err) {
+            console.error('Lỗi xoá bạn:', err);
+            Alert.alert('❌ Lỗi', 'Không thể xoá bạn.');
+          }
+        },
+        style: 'destructive',
+      },
+    ]
+  );
+};
+
+
 
 useEffect(() => {
   if (!searchQuery.trim()) {
@@ -190,28 +222,43 @@ useEffect(() => {
     return acc;
   }, {});
 
-  const renderItem = ({ item }) => (
+  const renderItem = ({ item }) => {
+  const renderRightActions = () => (
     <TouchableOpacity
-      onPress={() => handleChatWithFriend(item._id)}
-      style={tw`flex-row items-center justify-between p-4 border-b border-gray-300`}
+      onPress={() => handleRemoveFriend(item._id, item.fullName)}
+      style={tw`bg-red-500 justify-center items-center w-20`}
     >
-      <View style={tw`flex-row items-center`}>
-        <Image
-          source={{ uri: item.avatar || 'https://i.pravatar.cc/100' }}
-          style={tw`w-12 h-12 rounded-full`}
-        />
-        <Text style={tw`ml-4 text-base font-semibold`}>{item.fullName}</Text>
-      </View>
-      <View style={tw`flex-row`}>
-        <TouchableOpacity style={tw`ml-4`}>
-          <Ionicons name="call" size={24} color="#007AFF" />
-        </TouchableOpacity>
-        <TouchableOpacity style={tw`ml-4`}>
-          <Ionicons name="videocam" size={28} color="#007AFF" />
-        </TouchableOpacity>
-      </View>
+      <Ionicons name="trash-outline" size={24} color="white" />
+      <Text style={tw`text-white text-xs mt-1`}>Xoá</Text>
     </TouchableOpacity>
   );
+
+  return (
+    <Swipeable renderRightActions={renderRightActions}>
+      <TouchableOpacity
+        onPress={() => handleChatWithFriend(item._id)}
+        style={tw`flex-row items-center justify-between p-4 border-b border-gray-300 bg-white`}
+      >
+        <View style={tw`flex-row items-center`}>
+          <Image
+            source={{ uri: item.avatar || 'https://i.pravatar.cc/100' }}
+            style={tw`w-12 h-12 rounded-full`}
+          />
+          <Text style={tw`ml-4 text-base font-semibold`}>{item.fullName}</Text>
+        </View>
+        <View style={tw`flex-row`}>
+          <TouchableOpacity style={tw`ml-4`}>
+            <Ionicons name="call" size={24} color="#007AFF" />
+          </TouchableOpacity>
+          <TouchableOpacity style={tw`ml-4`}>
+            <Ionicons name="videocam" size={28} color="#007AFF" />
+          </TouchableOpacity>
+        </View>
+      </TouchableOpacity>
+    </Swipeable>
+  );
+};
+
 
   return (
     <View style={tw`flex-1 bg-white mt-10`}>
