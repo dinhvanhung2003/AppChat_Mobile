@@ -68,14 +68,22 @@ const ChatMessage = memo(({ item, isSender, onRecall, onDelete, onEdit, onDownlo
         )}
       </View>
     </TouchableOpacity>
-
-    {isSender && !item.isRecalled && !item._id.startsWith('local-') && selectedMessageId === item._id && (
-      <View style={tw`flex-row self-end mt-1`}>
+        
+    {!item.isRecalled && !item._id.startsWith('local-') && selectedMessageId === item._id && (
+  <View style={tw`flex-row ${isSender ? 'self-end' : 'self-start'} mt-1`}>
+    {isSender && (
+      <>
         <TouchableOpacity onPress={() => onRecall(item._id)}><Text style={tw`text-xs text-blue-200 mr-2`}>Thu hồi</Text></TouchableOpacity>
         <TouchableOpacity onPress={() => onEdit(item)}><Text style={tw`text-xs text-yellow-200 mr-2`}>Sửa</Text></TouchableOpacity>
         <TouchableOpacity onPress={() => onDelete(item._id)}><Text style={tw`text-xs text-red-300`}>Xóa</Text></TouchableOpacity>
-      </View>
+      </>
     )}
+    {!isSender && (
+      <TouchableOpacity onPress={() => onDelete(item._id)}><Text style={tw`text-xs text-red-500`}>Xóa khỏi tôi</Text></TouchableOpacity>
+    )}
+  </View>
+)}
+
   </View>
 ));
 
@@ -562,6 +570,21 @@ const ChatScreen = ({ route }) => {
     }
   };
 
+
+  // delete của người gửi 
+  const deleteMessageForReceiver = async (id) => {
+  try {
+    await axios.put(`${API_URL}/api/message/delete-for-receiver/${id}`, {}, {
+      headers: { Authorization: `Bearer ${token}` },
+    });
+    setMessages((prev) => prev.filter((msg) => msg._id !== id));
+  } catch (err) {
+    console.error("❌ Lỗi xóa phía người nhận:", err.response?.data || err.message);
+    Alert.alert('Lỗi', err.response?.data?.message || 'Không thể xóa tin nhắn khỏi phía bạn');
+  }
+};
+
+
   return (
     <KeyboardAvoidingView style={tw`flex-1 bg-white`} behavior={Platform.OS === 'ios' ? 'padding' : 'height'} keyboardVerticalOffset={Platform.OS === 'ios' ? 80 : 20}>
       <View style={tw`flex-row items-center justify-between px-4 py-3 bg-blue-500 mt-10`}>
@@ -623,7 +646,13 @@ const ChatScreen = ({ route }) => {
               item={item}
               isSender={item.sender?._id === currentUserId}
               onRecall={recallMessage}
-              onDelete={deleteMessageForMe}
+              onDelete={(id) => {
+    if (item.sender?._id === currentUserId) {
+      deleteMessageForMe(id);
+    } else {
+      deleteMessageForReceiver(id);
+    }
+  }}
               onEdit={(msg) => {
                 setEditingMessageId(msg._id);
                 setText(msg.content);
