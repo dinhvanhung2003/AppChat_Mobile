@@ -20,69 +20,93 @@ import { Button } from 'react-native';
 
 const API_URL = 'http://192.168.1.6:5000';
 const socket = io(API_URL, { transports: ['websocket'] });
-
-const ChatMessage = memo(({ item, isSender, onRecall, onDelete, onEdit, onDownload, selectedMessageId, setSelectedMessageId }) => (
-  <View style={tw`mb-2 px-2`}>
+const avatarUrl = item.sender?.avatar?.startsWith('http')
+  ? item.sender.avatar
+  : `${API_URL}/${item.sender?.avatar}`;
+const ChatMessage = memo(({ item, isSender, onRecall, onDelete, onEdit, onDownload, selectedMessageId, setSelectedMessageId, onForward }) => (
+ 
+ 
+ 
+ 
+ <View style={tw`mb-2 px-2`}>
     <TouchableOpacity
       activeOpacity={0.9}
       onPress={() => {
         setSelectedMessageId(selectedMessageId === item._id ? null : item._id);
       }}
     >
-      <View style={tw`max-w-[75%] px-3 py-2 rounded-xl ${isSender ? 'bg-blue-500 self-end' : 'bg-gray-200 self-start'}`}>
-        {/* 👇 Tên người gửi (chỉ hiển thị khi không phải tin nhắn của mình và có tên) */}
-        {!isSender && item.sender?.fullName && (
-          <Text style={tw`text-xs text-gray-500 mb-1 ml-1`}>{item.sender.fullName}</Text>
+      <View style={tw`flex-row ${isSender ? 'justify-end' : 'justify-start'} items-end mb-2 px-2`}>
+        {/* Avatar chỉ hiển thị với người nhận (không phải mình) */}
+        {!isSender && item.sender?.avatar && (
+        <Image source={{ uri: avatarUrl }} style={tw`w-8 h-8 rounded-full mr-2`} />
+
         )}
 
-        {item.isRecalled ? (
-          <Text style={tw`italic text-gray-400`}>[Tin nhắn đã thu hồi]</Text>
-        ) : item.type === 'image' ? (
-          <Image source={{ uri: item.fileUrl }} style={tw`w-60 h-60 rounded-lg`} />
-        ) : item.type === 'file' ? (
-          <TouchableOpacity onPress={() => onDownload(item.fileUrl, item.fileName)}>
-            <Text style={tw`${isSender ? 'text-white' : 'text-black'}`}>{item.fileName}</Text>
-          </TouchableOpacity>
-        ) : item.type === 'video' ? (
-          <Video
-            source={{ uri: item.fileUrl }} // URL của video
-            rate={1.0}
-            volume={1.0}
-            isMuted={false}
-            resizeMode="contain"
-            shouldPlay={false} // Không tự động phát khi mở
-            useNativeControls={true} // Cho phép điều khiển video
-            style={tw`w-60 h-60 rounded-lg`} // Bạn có thể điều chỉnh kích thước theo ý muốn
-          />
-        ) : item.type === 'audio' ? (
-          <Audio
-            source={{ uri: item.fileUrl }}
-            shouldPlay={false}
-            useNativeControls={true}
-            style={{ width: 300, height: 50 }}
-          />
-        ) : (
-          <Text style={tw`${isSender ? 'text-white' : 'text-black'}`}>
-            {item.content} {item.isEdited && '(đã chỉnh sửa)'}
-          </Text>
-        )}
+        <View style={tw`max-w-[75%] px-3 py-2 rounded-xl ${isSender ? 'bg-blue-500' : 'bg-gray-200'}`}>
+          {!isSender && item.sender?.fullName && (
+            <Text style={tw`text-xs text-gray-500 mb-1`}>{item.sender.fullName}</Text>
+          )}
+
+          {item.isRecalled ? (
+            <Text style={tw`italic text-gray-400`}>[Tin nhắn đã thu hồi]</Text>
+          ) : item.type === 'image' ? (
+            <Image source={{ uri: item.fileUrl }} style={tw`w-60 h-60 rounded-lg`} />
+          ) : item.type === 'file' ? (
+            <TouchableOpacity onPress={() => onDownload(item.fileUrl, item.fileName)}>
+              <Text style={tw`${isSender ? 'text-white' : 'text-black'}`}>{item.fileName}</Text>
+            </TouchableOpacity>
+          ) : item.type === 'video' ? (
+            <Video
+              source={{ uri: item.fileUrl }}
+              rate={1.0}
+              volume={1.0}
+              isMuted={false}
+              resizeMode="contain"
+              shouldPlay={false}
+              useNativeControls={true}
+              style={tw`w-60 h-60 rounded-lg`}
+            />
+          ) : item.type === 'audio' ? (
+            <Audio
+              source={{ uri: item.fileUrl }}
+              shouldPlay={false}
+              useNativeControls={true}
+              style={{ width: 300, height: 50 }}
+            />
+          ) : (
+            <Text style={tw`${isSender ? 'text-white' : 'text-black'}`}>
+              {item.content} {item.isEdited && '(đã chỉnh sửa)'}
+            </Text>
+          )}
+        </View>
       </View>
     </TouchableOpacity>
-        
+
+
     {!item.isRecalled && !item._id.startsWith('local-') && selectedMessageId === item._id && (
-  <View style={tw`flex-row ${isSender ? 'self-end' : 'self-start'} mt-1`}>
-    {isSender && (
-      <>
-        <TouchableOpacity onPress={() => onRecall(item._id)}><Text style={tw`text-xs text-blue-200 mr-2`}>Thu hồi</Text></TouchableOpacity>
-        <TouchableOpacity onPress={() => onEdit(item)}><Text style={tw`text-xs text-yellow-200 mr-2`}>Sửa</Text></TouchableOpacity>
-        <TouchableOpacity onPress={() => onDelete(item._id)}><Text style={tw`text-xs text-red-300`}>Xóa</Text></TouchableOpacity>
-      </>
+      <View style={tw`flex-row ${isSender ? 'self-end' : 'self-start'} mt-1`}>
+        {isSender && (
+          <>
+            <TouchableOpacity onPress={() => onRecall(item._id)}>
+              <Text style={tw`text-xs text-blue-200 mr-2`}>Thu hồi</Text>
+            </TouchableOpacity>
+            <TouchableOpacity onPress={() => onEdit(item)}>
+              <Text style={tw`text-xs text-yellow-200 mr-2`}>Sửa</Text>
+            </TouchableOpacity>
+            <TouchableOpacity onPress={() => onDelete(item._id)}>
+              <Text style={tw`text-xs text-red-300 mr-2`}>Xóa</Text>
+            </TouchableOpacity>
+            <TouchableOpacity onPress={() => onForward(item)}>
+              <Text style={tw`text-xs text-green-400`}>Chuyển tiếp</Text>
+            </TouchableOpacity>
+          </>
+        )}
+
+        {!isSender && (
+          <TouchableOpacity onPress={() => onDelete(item._id)}><Text style={tw`text-xs text-red-500`}>Xóa khỏi tôi</Text></TouchableOpacity>
+        )}
+      </View>
     )}
-    {!isSender && (
-      <TouchableOpacity onPress={() => onDelete(item._id)}><Text style={tw`text-xs text-red-500`}>Xóa khỏi tôi</Text></TouchableOpacity>
-    )}
-  </View>
-)}
 
   </View>
 ));
@@ -100,6 +124,63 @@ const ChatScreen = ({ route }) => {
   const navigation = useNavigation();
   const scrollToBottom = () => flatListRef.current?.scrollToEnd({ animated: true });
   const [groupData, setGroupData] = useState(group);
+  const [contacts, setContacts] = useState([]);
+  // 👇 Gọi khi muốn mở modal chọn người để chuyển tiếp
+  const [showForwardModal, setShowForwardModal] = useState(false);
+  const [messageToForward, setMessageToForward] = useState(null);
+
+  // Mở modal từ menu chuyển tiếp
+  const handleForward = (message) => {
+    setMessageToForward(message);
+    setShowForwardModal(true);
+  };
+  const fetchContacts = async () => {
+    try {
+      const res = await axios.get(`${API_URL}/users/listFriends`, {
+        headers: { Authorization: `Bearer ${token}` },
+      });
+      setContacts(Array.isArray(res.data) ? res.data : []);
+    } catch (err) {
+      console.error('❌ Lỗi khi lấy danh sách bạn:', err);
+    }
+  };
+  useEffect(() => {
+    if (token) {
+      fetchContacts();
+    }
+  }, [token]);
+
+  const forwardToFriend = async (friend) => {
+    try {
+      // Gọi API để lấy hoặc tạo chatId giữa 2 người
+      const resChat = await axios.post(`${API_URL}/api/chat`, {
+        userId: friend._id
+      }, {
+        headers: { Authorization: `Bearer ${token}` }
+      });
+
+      const chatIdToUse = resChat.data._id;
+
+      // Gửi yêu cầu chuyển tiếp
+      const res = await axios.post(`${API_URL}/api/message/forward`, {
+        messageId: messageToForward._id,
+        toChatId: chatIdToUse,
+      }, {
+        headers: { Authorization: `Bearer ${token}` },
+      });
+
+      socket.emit('messageReceived', res.data.data);
+      Alert.alert("✅", "Chuyển tiếp thành công");
+    } catch (err) {
+      console.error("Chuyển tiếp lỗi:", err);
+      Alert.alert("❌", "Chuyển tiếp thất bại");
+    } finally {
+      setShowForwardModal(false);
+    }
+  };
+
+
+
 
   //goi thoại và video call
   const [incomingCall, setIncomingCall] = useState(null);
@@ -573,16 +654,17 @@ const ChatScreen = ({ route }) => {
 
   // delete của người gửi 
   const deleteMessageForReceiver = async (id) => {
-  try {
-    await axios.put(`${API_URL}/api/message/delete-for-receiver/${id}`, {}, {
-      headers: { Authorization: `Bearer ${token}` },
-    });
-    setMessages((prev) => prev.filter((msg) => msg._id !== id));
-  } catch (err) {
-    console.error("❌ Lỗi xóa phía người nhận:", err.response?.data || err.message);
-    Alert.alert('Lỗi', err.response?.data?.message || 'Không thể xóa tin nhắn khỏi phía bạn');
-  }
-};
+    try {
+      await axios.put(`${API_URL}/api/message/delete-for-receiver/${id}`, {}, {
+        headers: { Authorization: `Bearer ${token}` },
+      });
+      setMessages((prev) => prev.filter((msg) => msg._id !== id));
+    } catch (err) {
+      console.error("❌ Lỗi xóa phía người nhận:", err.response?.data || err.message);
+      Alert.alert('Lỗi', err.response?.data?.message || 'Không thể xóa tin nhắn khỏi phía bạn');
+    }
+  };
+
 
 
   return (
@@ -647,12 +729,12 @@ const ChatScreen = ({ route }) => {
               isSender={item.sender?._id === currentUserId}
               onRecall={recallMessage}
               onDelete={(id) => {
-    if (item.sender?._id === currentUserId) {
-      deleteMessageForMe(id);
-    } else {
-      deleteMessageForReceiver(id);
-    }
-  }}
+                if (item.sender?._id === currentUserId) {
+                  deleteMessageForMe(id);
+                } else {
+                  deleteMessageForReceiver(id);
+                }
+              }}
               onEdit={(msg) => {
                 setEditingMessageId(msg._id);
                 setText(msg.content);
@@ -660,6 +742,7 @@ const ChatScreen = ({ route }) => {
               onDownload={downloadFile}
               selectedMessageId={selectedMessageId}
               setSelectedMessageId={setSelectedMessageId}
+              onForward={handleForward}
             />
           )}
           contentContainerStyle={tw`p-3 pb-24`}
@@ -687,6 +770,26 @@ const ChatScreen = ({ route }) => {
             {editingMessageId ? 'Lưu' : 'Gửi'}
           </Text>
         </TouchableOpacity>
+        {showForwardModal && (
+          <View style={tw`absolute top-0 bottom-0 left-0 right-0 bg-black/50 justify-center items-center z-50`}>
+            <View style={tw`bg-white p-4 rounded w-80 max-h-[60%]`}>
+              <Text style={tw`text-lg font-bold mb-2`}>Chuyển tiếp tới:</Text>
+              <FlatList
+                data={contacts}
+                keyExtractor={(item) => item._id}
+                renderItem={({ item }) => (
+                  <TouchableOpacity onPress={() => forwardToFriend(item)} style={tw`p-2 border-b`}>
+                    <Text>{item.fullName}</Text>
+                  </TouchableOpacity>
+                )}
+              />
+              <TouchableOpacity onPress={() => setShowForwardModal(false)} style={tw`mt-2`}>
+                <Text style={tw`text-blue-500 text-center`}>Đóng</Text>
+              </TouchableOpacity>
+            </View>
+          </View>
+        )}
+
       </View>
     </KeyboardAvoidingView>
   );
