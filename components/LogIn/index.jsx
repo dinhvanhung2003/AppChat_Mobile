@@ -8,7 +8,7 @@ import {
 } from "react-native";
 import AsyncStorage from "@react-native-async-storage/async-storage";
 import tw from "twrnc";
-const API_URL = 'http://192.168.1.6:5000';
+import { API_URL } from '../../configs/api'; 
 const LoginScreen = ({ navigation }) => {
   const [email, setEmail] = useState("");
   const [password, setPassword] = useState("");

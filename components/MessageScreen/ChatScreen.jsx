@@ -18,17 +18,15 @@ import { Video, Audio } from 'expo-av';
 // import { mediaDevices, RTCPeerConnection, RTCView, RTCSessionDescription, RTCIceCandidate } from 'react-native-webrtc';
 import { Button } from 'react-native';
 
-const API_URL = 'http://192.168.1.6:5000';
+import { API_URL } from '../../configs/api';
 const socket = io(API_URL, { transports: ['websocket'] });
-const avatarUrl = item.sender?.avatar?.startsWith('http')
-  ? item.sender.avatar
-  : `${API_URL}/${item.sender?.avatar}`;
+
 const ChatMessage = memo(({ item, isSender, onRecall, onDelete, onEdit, onDownload, selectedMessageId, setSelectedMessageId, onForward }) => (
- 
- 
- 
- 
- <View style={tw`mb-2 px-2`}>
+
+
+
+
+  <View style={tw`mb-2 px-2`}>
     <TouchableOpacity
       activeOpacity={0.9}
       onPress={() => {
@@ -38,7 +36,7 @@ const ChatMessage = memo(({ item, isSender, onRecall, onDelete, onEdit, onDownlo
       <View style={tw`flex-row ${isSender ? 'justify-end' : 'justify-start'} items-end mb-2 px-2`}>
         {/* Avatar chỉ hiển thị với người nhận (không phải mình) */}
         {!isSender && item.sender?.avatar && (
-        <Image source={{ uri: avatarUrl }} style={tw`w-8 h-8 rounded-full mr-2`} />
+          <Image source={item.sender.avatar} style={tw`w-8 h-8 rounded-full mr-2`} />
 
         )}
 
@@ -96,15 +94,19 @@ const ChatMessage = memo(({ item, isSender, onRecall, onDelete, onEdit, onDownlo
             <TouchableOpacity onPress={() => onDelete(item._id)}>
               <Text style={tw`text-xs text-red-300 mr-2`}>Xóa</Text>
             </TouchableOpacity>
-            <TouchableOpacity onPress={() => onForward(item)}>
+            {/* <TouchableOpacity onPress={() => onForward(item)}>
               <Text style={tw`text-xs text-green-400`}>Chuyển tiếp</Text>
-            </TouchableOpacity>
+            </TouchableOpacity> */}
           </>
         )}
 
         {!isSender && (
           <TouchableOpacity onPress={() => onDelete(item._id)}><Text style={tw`text-xs text-red-500`}>Xóa khỏi tôi</Text></TouchableOpacity>
+
         )}
+        <TouchableOpacity onPress={() => onForward(item)}>
+          <Text style={tw`text-xs text-green-400`}>Chuyển tiếp</Text>
+        </TouchableOpacity>
       </View>
     )}
 
@@ -130,38 +132,101 @@ const ChatScreen = ({ route }) => {
   const [messageToForward, setMessageToForward] = useState(null);
 
   // Mở modal từ menu chuyển tiếp
-  const handleForward = (message) => {
+  const handleForward = async (message) => {
     setMessageToForward(message);
     setShowForwardModal(true);
-  };
-  const fetchContacts = async () => {
-    try {
-      const res = await axios.get(`${API_URL}/users/listFriends`, {
-        headers: { Authorization: `Bearer ${token}` },
-      });
-      setContacts(Array.isArray(res.data) ? res.data : []);
-    } catch (err) {
-      console.error('❌ Lỗi khi lấy danh sách bạn:', err);
+
+    const storedToken = await AsyncStorage.getItem('token');
+    if (storedToken) {
+      setToken(storedToken);
+      await fetchContacts(); // 👈 chỉ fetch sau khi có token
     }
   };
+  //  chuyển tiếp nhóm 
+  const fetchContactsAndGroups = async () => {
+    try {
+      const [friendsRes, groupsRes] = await Promise.all([
+        axios.get(`${API_URL}/users/listFriends`, {
+          headers: { Authorization: `Bearer ${token}` },
+        }),
+        axios.get(`${API_URL}/api/chat/groups`, {
+          headers: { Authorization: `Bearer ${token}` },
+        }),
+      ]);
+
+      const formattedFriends = (friendsRes.data || []).map(u => ({
+        ...u,
+        isGroup: false,
+      }));
+
+      const formattedGroups = (groupsRes.data || []).map(g => ({
+        _id: g._id,
+        fullName: g.chatName,
+        avatar: 'https://icon-library.com/images/group-icon/group-icon-0.jpg', // fallback
+        isGroup: true,
+      }));
+
+      setContacts([...formattedFriends, ...formattedGroups]);
+    } catch (err) {
+      console.error('❌ Lỗi lấy danh sách bạn và nhóm:', err.message);
+    }
+  };
+
+
+  const fetchContacts = async () => {
+  try {
+    const [friendsRes, chatsRes] = await Promise.all([
+      axios.get(`${API_URL}/users/listFriends`, {
+        headers: { Authorization: `Bearer ${token}` },
+      }),
+      axios.get(`${API_URL}/api/chat`, {
+        headers: { Authorization: `Bearer ${token}` },
+      }),
+    ]);
+
+    const friends = (friendsRes.data || []).map(friend => ({
+      ...friend,
+      isGroup: false,
+    }));
+
+    const groups = (chatsRes.data || [])
+      .filter(chat => chat.isGroupChat)
+      .map(group => ({
+        _id: group._id,
+        fullName: group.chatName,
+        avatar: group.groupAvatar || 'https://icon-library.com/images/group-icon/group-icon-0.jpg',
+        isGroup: true,
+      }));
+
+    setContacts([...friends, ...groups]);
+  } catch (err) {
+    console.error('❌ Lỗi khi lấy bạn + nhóm:', err.message);
+  }
+};
+
+
   useEffect(() => {
     if (token) {
       fetchContacts();
     }
   }, [token]);
 
-  const forwardToFriend = async (friend) => {
+  const forwardToFriend = async (target) => {
     try {
-      // Gọi API để lấy hoặc tạo chatId giữa 2 người
-      const resChat = await axios.post(`${API_URL}/api/chat`, {
-        userId: friend._id
-      }, {
-        headers: { Authorization: `Bearer ${token}` }
-      });
+      let chatIdToUse = target._id;
 
-      const chatIdToUse = resChat.data._id;
+      // Nếu là bạn, tạo chat cá nhân
+      if (!target.isGroup) {
+        const resChat = await axios.post(`${API_URL}/api/chat`, {
+          userId: target._id
+        }, {
+          headers: { Authorization: `Bearer ${token}` }
+        });
 
-      // Gửi yêu cầu chuyển tiếp
+        chatIdToUse = resChat.data._id;
+      }
+
+      // Gửi tin nhắn đến chatId (nhóm hoặc bạn)
       const res = await axios.post(`${API_URL}/api/message/forward`, {
         messageId: messageToForward._id,
         toChatId: chatIdToUse,
@@ -172,12 +237,13 @@ const ChatScreen = ({ route }) => {
       socket.emit('messageReceived', res.data.data);
       Alert.alert("✅", "Chuyển tiếp thành công");
     } catch (err) {
-      console.error("Chuyển tiếp lỗi:", err);
+      console.error("❌ Chuyển tiếp lỗi:", err.message);
       Alert.alert("❌", "Chuyển tiếp thất bại");
     } finally {
       setShowForwardModal(false);
     }
   };
+
 
 
 
@@ -749,6 +815,39 @@ const ChatScreen = ({ route }) => {
           onContentSizeChange={() => scrollToBottom()}
         />
       )}
+      {showForwardModal && (
+        <View style={tw`absolute top-0 bottom-0 left-0 right-0 bg-black/50 justify-center items-center z-50`}>
+          <View style={tw`bg-white p-4 rounded w-80 max-h-[60%]`}>
+            <Text style={tw`text-lg font-bold mb-2`}>Chuyển tiếp tới:</Text>
+
+            <FlatList
+              data={contacts}
+              keyExtractor={(item) => item._id}
+              style={tw`max-h-80`}
+              renderItem={({ item }) => (
+                <TouchableOpacity onPress={() => forwardToFriend(item)} style={tw`p-2 border-b`}>
+                  <View style={tw`flex-row items-center`}>
+                    <Image source={{ uri: item.avatar }} style={tw`w-8 h-8 rounded-full mr-2`} />
+                    <View style={tw`flex-row flex-wrap items-center`}>
+                      <Text>{item.fullName}</Text>
+                      {item.isGroup && (
+                        <Text style={tw`text-xs text-gray-400 ml-1`}>(Nhóm)</Text>
+                      )}
+                    </View>
+                  </View>
+                </TouchableOpacity>
+              )}
+              ListEmptyComponent={
+                <Text style={tw`text-center text-gray-400 mt-2`}>Không có bạn bè hoặc nhóm</Text>
+              }
+            />
+
+            <TouchableOpacity onPress={() => setShowForwardModal(false)} style={tw`mt-4`}>
+              <Text style={tw`text-blue-500 text-center`}>Đóng</Text>
+            </TouchableOpacity>
+          </View>
+        </View>
+      )}
 
       <View style={tw`flex-row items-center bg-white p-2 border-t border-gray-200`}>
         <TouchableOpacity onPress={pickImage} style={tw`mr-2`}><Ionicons name="image-outline" size={24} color="gray" /></TouchableOpacity>
@@ -770,25 +869,7 @@ const ChatScreen = ({ route }) => {
             {editingMessageId ? 'Lưu' : 'Gửi'}
           </Text>
         </TouchableOpacity>
-        {showForwardModal && (
-          <View style={tw`absolute top-0 bottom-0 left-0 right-0 bg-black/50 justify-center items-center z-50`}>
-            <View style={tw`bg-white p-4 rounded w-80 max-h-[60%]`}>
-              <Text style={tw`text-lg font-bold mb-2`}>Chuyển tiếp tới:</Text>
-              <FlatList
-                data={contacts}
-                keyExtractor={(item) => item._id}
-                renderItem={({ item }) => (
-                  <TouchableOpacity onPress={() => forwardToFriend(item)} style={tw`p-2 border-b`}>
-                    <Text>{item.fullName}</Text>
-                  </TouchableOpacity>
-                )}
-              />
-              <TouchableOpacity onPress={() => setShowForwardModal(false)} style={tw`mt-2`}>
-                <Text style={tw`text-blue-500 text-center`}>Đóng</Text>
-              </TouchableOpacity>
-            </View>
-          </View>
-        )}
+
 
       </View>
     </KeyboardAvoidingView>

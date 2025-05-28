@@ -12,7 +12,7 @@ import { useNavigation } from '@react-navigation/native';
 import NavigationBar from '../../components/MessageScreen/NavigationBar';
 import SearchBar from '../SearchBar/index';
 import { Swipeable } from 'react-native-gesture-handler';
-const API_URL = 'http://192.168.1.6:5000';
+import { API_URL } from '../../configs/api'; 
 const socket = io(API_URL, { transports: ['websocket'] });
 
 const PhoneBook = () => {
