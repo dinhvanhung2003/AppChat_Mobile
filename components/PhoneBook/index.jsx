@@ -111,7 +111,51 @@ const fetchSentRequests = async () => {
   );
 };
 
+useEffect(() => {
+  socket.on("youRemovedFriend", ({ friendId }) => {
+    setContacts(prev => prev.filter(c => c._id !== friendId));
+    setChats?.(prev => prev.filter(c => {
+      const other = c.users?.find(u => u._id !== currentUserId);
+      return other?._id !== friendId;
+    }));
+    Alert.alert("🗑️", "Bạn đã xoá một người bạn.");
+  });
 
+  return () => socket.off("youRemovedFriend");
+}, [currentUserId]);
+
+
+useEffect(() => {
+  socket.on("youWereRemoved", ({ userId }) => {
+    setContacts(prev => prev.filter(c => c._id !== userId));
+    setChats?.(prev => prev.filter(c => {
+      const other = c.users?.find(u => u._id !== currentUserId);
+      return other?._id !== userId;
+    }));
+    Alert.alert("⚠️", "Một người bạn đã xoá bạn khỏi danh sách.");
+  });
+
+  return () => socket.off("youWereRemoved");
+}, [currentUserId]);
+useEffect(() => {
+  const onRemoved = ({ friendId }) => {
+    setContacts(prev => prev.filter(c => c._id !== friendId));
+    fetchFriends(token);
+  };
+
+  const onBeRemoved = ({ userId }) => {
+    setContacts(prev => prev.filter(c => c._id !== userId));
+    fetchFriends(token);
+  };
+
+  socket.on("youRemovedFriend", onRemoved);
+  socket.on("youWereRemoved", onBeRemoved);
+
+  return () => {
+    socket.off("youRemovedFriend", onRemoved);
+    socket.off("youWereRemoved", onBeRemoved);
+  };
+}, [currentUserId, token]);
 
 
   useEffect(() => {
@@ -153,9 +197,9 @@ const fetchSentRequests = async () => {
   });
 
   socket.on('friendRequestAccepted', ({ sender }) => {
-    setContacts((prev) => [...prev, sender]);
-    Alert.alert('🤝', `Bạn vừa kết bạn với ${sender.fullName}`);
-  });
+  fetchFriends(token); // đảm bảo đồng bộ toàn bộ danh sách
+  Alert.alert('🤝', `Bạn vừa kết bạn với ${sender.fullName}`);
+});
 
   return () => {
     socket.off('friendRequestReceived');

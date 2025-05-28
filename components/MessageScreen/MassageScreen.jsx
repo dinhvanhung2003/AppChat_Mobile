@@ -11,7 +11,8 @@ import { useNavigation } from '@react-navigation/native';
 import axios from 'axios';
 import { jwtDecode } from 'jwt-decode';
 import { io } from 'socket.io-client';
-import { API_URL } from '../../configs/api'; 
+import { API_URL } from '../../configs/api';
+import GroupAvatar from './GroupAvatar'; // Giả sử bạn đã tạo component này
 const socket = io(API_URL, { transports: ['websocket'] });
 
 const MessageListScreen = () => {
@@ -21,6 +22,7 @@ const MessageListScreen = () => {
   const [searchResults, setSearchResults] = useState([]);
   const [chats, setChats] = useState([]);
   const [currentUserId, setCurrentUserId] = useState('');
+  const [onlineUsers, setOnlineUsers] = useState([]);
 
   const navigation = useNavigation();
   const handleTabPress = useTabNavigation();
@@ -32,11 +34,38 @@ const MessageListScreen = () => {
         setToken(storedToken);
         const decoded = jwtDecode(storedToken);
         setCurrentUserId(decoded.id);
-        socket.emit('joinGlobalChatList', decoded.id);
+        socket.emit('setup', decoded.id);
       }
     };
     fetchToken();
   }, []);
+
+  useEffect(() => {
+    if (token) fetchChats();
+  }, [token]);
+
+
+
+
+
+
+  // Lấy danh sách người dùng online
+  useEffect(() => {
+    socket.on('userOnline', (userId) => {
+      setOnlineUsers((prev) => [...new Set([...prev, userId])]);
+    });
+
+    socket.on('userOffline', (userId) => {
+      setOnlineUsers((prev) => prev.filter((id) => id !== userId));
+    });
+
+    return () => {
+      socket.off('userOnline');
+      socket.off('userOffline');
+    };
+  }, []);
+
+
 
   const fetchChats = useCallback(async () => {
     try {
@@ -44,7 +73,6 @@ const MessageListScreen = () => {
         headers: { Authorization: `Bearer ${token}` },
       });
 
-      // ✅ Loại trùng _id
       const uniqueChats = res.data.filter(
         (chat, index, self) =>
           index === self.findIndex((c) => c._id === chat._id)
@@ -57,10 +85,19 @@ const MessageListScreen = () => {
       });
 
       setChats(sortedChats);
+
+      // ✅ Join socket rooms for each chat
+      sortedChats.forEach(chat => {
+        
+          socket.emit('joinChat', chat._id);
+        
+      });
+
     } catch (err) {
       console.error('❌ Lỗi lấy danh sách chat:', err);
     }
   }, [token]);
+
 
   useEffect(() => {
     const unsubscribe = navigation.addListener('focus', () => {
@@ -71,31 +108,31 @@ const MessageListScreen = () => {
 
   useEffect(() => {
     if (!token || !currentUserId) return;
-  
+
     const handleMessage = (newMsg) => {
       const chatId = newMsg.chat?._id || newMsg.chatId;
-  
+
       setChats((prevChats) => {
         const existingIndex = prevChats.findIndex((chat) => chat._id === chatId);
-  
+
         const latestMessage = {
           content: newMsg.isRecalled ? '[Đã thu hồi]' : newMsg.content,
           createdAt: newMsg.createdAt,
           isRecalled: newMsg.isRecalled,
         };
-  
+
         if (existingIndex !== -1) {
           const updatedChat = {
             ...prevChats[existingIndex],
             latestMessage,
           };
-  
+
           const updatedList = [
             updatedChat,
             ...prevChats.slice(0, existingIndex),
             ...prevChats.slice(existingIndex + 1),
           ];
-  
+
           return updatedList.filter(
             (chat, index, self) =>
               index === self.findIndex((c) => c._id === chat._id)
@@ -106,19 +143,19 @@ const MessageListScreen = () => {
         }
       });
     };
-  
+
     const handleGroupUpdated = (updatedGroup) => {
       fetchChats(); // 👈 luôn gọi lại API
     };
-  
+
     const handleGroupDeleted = ({ chatId }) => {
       setChats((prevChats) => prevChats.filter((chat) => chat._id !== chatId));
     };
-  
+
     const handleGroupRemoved = (chatId) => {
       setChats((prevChats) => prevChats.filter((chat) => chat._id !== chatId));
     };
-  
+
     socket.on('messageReceived', handleMessage);
     socket.on('newMessage', handleMessage);
     socket.on('messageEdited', handleMessage);
@@ -126,7 +163,7 @@ const MessageListScreen = () => {
     socket.on('group:updated', handleGroupUpdated);
     socket.on('group:deleted', handleGroupDeleted);
     socket.on('group:removed', handleGroupRemoved);
-  
+
     return () => {
       socket.off('messageReceived', handleMessage);
       socket.off('newMessage', handleMessage);
@@ -175,69 +212,107 @@ const MessageListScreen = () => {
     const isGroupChat = item.isGroupChat;
     const otherUser = item.users?.find((u) => u._id !== currentUserId);
     const displayName = isGroupChat ? item.chatName : otherUser?.fullName || 'Không rõ';
-   const displayAvatar = isGroupChat
-  ? item.groupAvatar || 'https://cdn-icons-png.flaticon.com/512/74/74472.png'
-  : otherUser?.avatar || 'https://via.placeholder.com/150';
+    const displayAvatar = isGroupChat
+      ? item.groupAvatar || 'https://cdn-icons-png.flaticon.com/512/74/74472.png'
+      : otherUser?.avatar || 'https://via.placeholder.com/150';
 
+    const isOnline = otherUser && onlineUsers.includes(otherUser._id);
+    console.log('🟢 Checking user:', otherUser?._id, 'Online:', isOnline);
 
     return (
       <TouchableOpacity
         style={tw`flex-row items-center p-3 border-b border-gray-200`}
-        onPress={() =>
-          navigation.navigate('ChatScreen', {
-            chatId: item._id,
-            partner: isGroupChat ? null : otherUser,
-            chatName: isGroupChat ? item.chatName : null,
-            isGroup: isGroupChat,
-            group: isGroupChat ? item : null,
-             // ✅ Thêm các dòng này:
-      callerId: currentUserId,
-      calleeId: otherUser?._id,
-      isCaller: false, // Mặc định khi mở trò chuyện, không gọi ngay
-          })
-        }
+        onPress={() => navigation.navigate('ChatScreen', {
+          chatId: item._id,
+          partner: isGroupChat ? null : otherUser,
+          chatName: isGroupChat ? item.chatName : null,
+          isGroup: isGroupChat,
+          group: isGroupChat ? item : null,
+          callerId: currentUserId,
+          calleeId: otherUser?._id,
+          isCaller: false,
+        })}
       >
-        <Image
-          source={{ uri: displayAvatar }}
-          style={tw`w-12 h-12 rounded-full`}
-        />
+        <View style={tw`relative`}>
+          {isGroupChat ? (
+            item.groupAvatar ? (
+              <Image
+                source={{ uri: item.groupAvatar }}
+                style={tw`w-12 h-12 rounded-full`}
+              />
+            ) : (
+              <GroupAvatar users={item.users} size={48} />
+            )
+          ) : (
+            <Image
+              source={{ uri: displayAvatar }}
+              style={tw`w-12 h-12 rounded-full`}
+            />
+          )}
+          {!isGroupChat && isOnline && (
+            <View style={tw`w-3 h-3 bg-green-500 rounded-full absolute bottom-0 right-0 border border-white`} />
+          )}
+        </View>
+
+
         <View style={tw`ml-3 flex-1`}>
           <View style={tw`flex-row justify-between`}>
             <Text style={tw`text-base font-semibold`}>
               {displayName}
             </Text>
             <Text style={tw`text-xs text-gray-500`}>
-              {item.latestMessage?.createdAt?.substring(11, 16) || ''}
+              {item.latestMessage?.createdAt
+                ? new Date(item.latestMessage.createdAt).toLocaleTimeString('vi-VN', {
+                  hour: '2-digit',
+                  minute: '2-digit',
+                })
+                : ''}
             </Text>
           </View>
           <Text style={tw`text-gray-600`} numberOfLines={1}>
-  {item.latestMessage?.isRecalled
-    ? '[Đã thu hồi]'
-    : item.latestMessage?.content
-      ? item.latestMessage.content
-      : `[${item.latestMessage?.type?.toUpperCase() || 'Tin nhắn'}]`}
-</Text>
-
+            {item.latestMessage?.isRecalled
+              ? '[Đã thu hồi]'
+              : item.latestMessage?.type === 'image'
+                ? '[Ảnh]'
+                : item.latestMessage?.type === 'video'
+                  ? '[Video]'
+                  : item.latestMessage?.type === 'audio'
+                    ? '[Âm thanh]'
+                    : item.latestMessage?.type === 'file'
+                      ? '[Tệp]'
+                      : item.isGroupChat
+                        ? `${item.latestMessage?.sender?.fullName || 'Ai đó'}: ${item.latestMessage?.content || ''}`
+                        : item.latestMessage?.content || ''}
+          </Text>
         </View>
       </TouchableOpacity>
     );
   };
 
-  const renderSearchItem = ({ item }) => (
-    <TouchableOpacity
-      style={tw`flex-row items-center p-3 border-b border-gray-200`}
-      onPress={() => handleSelectUser(item._id)}
-    >
-      <Image
-        source={{ uri: item.avatar || 'https://via.placeholder.com/150' }}
-        style={tw`w-12 h-12 rounded-full`}
-      />
-      <View style={tw`ml-3 flex-1`}>
-        <Text style={tw`text-base font-semibold`}>{item.fullName}</Text>
-        <Text style={tw`text-gray-600`}>{item.email}</Text>
-      </View>
-    </TouchableOpacity>
-  );
+
+  const renderSearchItem = ({ item }) => {
+    const isOnline = onlineUsers.includes(item._id);
+    const displayAvatar = item.avatar || 'https://via.placeholder.com/150';
+
+    return (
+      <TouchableOpacity
+        style={tw`flex-row items-center p-3 border-b border-gray-200`}
+        onPress={() => handleSelectUser(item._id)}
+      >
+        <View style={tw`relative`}>
+          <Image source={{ uri: displayAvatar }} style={tw`w-12 h-12 rounded-full`} />
+          {isOnline && (
+            <View style={tw`w-3 h-3 bg-green-500 rounded-full absolute bottom-0 right-0 border border-white`} />
+          )}
+        </View>
+        <View style={tw`ml-3 flex-1`}>
+          <Text style={tw`text-base font-semibold`}>{item.fullName}</Text>
+          <Text style={tw`text-gray-600`}>{item.email}</Text>
+        </View>
+      </TouchableOpacity>
+    );
+  };
+
 
   return (
     <View style={tw`flex-1 bg-white mt-10`}>
