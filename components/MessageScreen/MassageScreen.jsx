@@ -11,13 +11,8 @@ import { useNavigation } from '@react-navigation/native';
 import axios from 'axios';
 import { jwtDecode } from 'jwt-decode';
 import { io } from 'socket.io-client';
-<<<<<<< HEAD
 import { API_URL } from '../../configs/api';
 import GroupAvatar from './GroupAvatar'; // Giả sử bạn đã tạo component này
-=======
-
-const API_URL = 'http://192.168.88.179:5000';
->>>>>>> 83bf22c4cfc7096e2f1a1e512f950e445468115c
 const socket = io(API_URL, { transports: ['websocket'] });
 
 const MessageListScreen = () => {

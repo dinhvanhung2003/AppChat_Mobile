@@ -15,13 +15,13 @@ import * as Sharing from 'expo-sharing';
 import AsyncStorage from '@react-native-async-storage/async-storage';
 import { useNavigation } from '@react-navigation/native';
 import { Video, Audio } from 'expo-av';
+import {navigation} from '@react-navigation/native';
 // import { mediaDevices, RTCPeerConnection, RTCView, RTCSessionDescription, RTCIceCandidate } from 'react-native-webrtc';
 import { Button } from 'react-native';
-
 import { API_URL } from '../../configs/api';
 const socket = io(API_URL, { transports: ['websocket'] });
 
-const ChatMessage = memo(({ item, isSender, onRecall, onDelete, onEdit, onDownload, selectedMessageId, setSelectedMessageId, onForward }) => (
+const ChatMessage = memo(({ navigation,item, isSender, onRecall, onDelete, onEdit, onDownload, selectedMessageId, setSelectedMessageId, onForward }) => (
 
 
 
@@ -887,6 +887,7 @@ const ChatScreen = ({ route }) => {
               setSelectedMessageId={setSelectedMessageId}
               navigation={navigation}
               onDownload={downloadFile}
+              
             />
           )}
           contentContainerStyle={tw`p-3 pb-24`}

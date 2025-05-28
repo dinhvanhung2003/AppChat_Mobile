@@ -9,11 +9,7 @@ import { jwtDecode } from 'jwt-decode';
 import { io } from 'socket.io-client';
 import tw from 'twrnc';
 
-<<<<<<< HEAD
 import { API_URL } from '../../configs/api'; 
-=======
-const API_URL = 'http://192.168.88.179:5000';
->>>>>>> 83bf22c4cfc7096e2f1a1e512f950e445468115c
 const socket = io(API_URL, { transports: ['websocket'] });
 
 const GroupCreateScreen = () => {
