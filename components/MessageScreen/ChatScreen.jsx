@@ -29,7 +29,7 @@ const ChatMessage = memo(({ item, isSender, onRecall, onDelete, onEdit, onDownlo
   <View style={tw`mb-2 px-2`}>
     <TouchableOpacity
       activeOpacity={0.9}
-      onPress={() => {
+      onLongPress={() => {
         setSelectedMessageId(selectedMessageId === item._id ? null : item._id);
       }}
     >
@@ -40,43 +40,42 @@ const ChatMessage = memo(({ item, isSender, onRecall, onDelete, onEdit, onDownlo
 
         )}
 
-        <View style={tw`max-w-[75%] px-3 py-2 rounded-xl ${isSender ? 'bg-blue-500' : 'bg-gray-200'}`}>
-          {!isSender && item.sender?.fullName && (
-            <Text style={tw`text-xs text-gray-500 mb-1`}>{item.sender.fullName}</Text>
-          )}
-
-          {item.isRecalled ? (
-            <Text style={tw`italic text-gray-400`}>[Tin nhắn đã thu hồi]</Text>
-          ) : item.type === 'image' ? (
+        {item.isRecalled ? (
+          <Text style={tw`italic text-gray-400`}>[Tin nhắn đã thu hồi]</Text>
+        ) : item.type === 'image' ? (
+          <TouchableOpacity onPress={() => navigation.navigate('ImageViewer', { imageUrl: item.fileUrl })}>
             <Image source={{ uri: item.fileUrl }} style={tw`w-60 h-60 rounded-lg`} />
-          ) : item.type === 'file' ? (
-            <TouchableOpacity onPress={() => onDownload(item.fileUrl, item.fileName)}>
-              <Text style={tw`${isSender ? 'text-white' : 'text-black'}`}>{item.fileName}</Text>
-            </TouchableOpacity>
-          ) : item.type === 'video' ? (
-            <Video
-              source={{ uri: item.fileUrl }}
-              rate={1.0}
-              volume={1.0}
-              isMuted={false}
-              resizeMode="contain"
-              shouldPlay={false}
-              useNativeControls={true}
-              style={tw`w-60 h-60 rounded-lg`}
-            />
-          ) : item.type === 'audio' ? (
-            <Audio
-              source={{ uri: item.fileUrl }}
-              shouldPlay={false}
-              useNativeControls={true}
-              style={{ width: 300, height: 50 }}
-            />
-          ) : (
-            <Text style={tw`${isSender ? 'text-white' : 'text-black'}`}>
-              {item.content} {item.isEdited && '(đã chỉnh sửa)'}
-            </Text>
-          )}
-        </View>
+          </TouchableOpacity>
+        ) : item.type === 'file' ? (
+          // <TouchableOpacity onPress={() => downloadFile(item.fileUrl, item.fileName)}>
+          //   <Text style={tw`text-blue-500 underline`}>{item.fileName}</Text>
+          // </TouchableOpacity>
+          <TouchableOpacity onPress={() => onDownload(item.fileUrl, item.fileName)}>
+            <Text style={tw`text-blue-500 underline`}>{item.fileName}</Text>
+          </TouchableOpacity>
+        ) : item.type === 'video' ? (
+          <Video
+            source={{ uri: item.fileUrl }} // URL của video
+            rate={1.0}
+            volume={1.0}
+            isMuted={false}
+            resizeMode="contain"
+            shouldPlay={false} // Không tự động phát khi mở
+            useNativeControls={true} // Cho phép điều khiển video
+            style={tw`w-60 h-60 rounded-lg`} // Bạn có thể điều chỉnh kích thước theo ý muốn
+          />
+        ) : item.type === 'audio' ? (
+          <Audio
+            source={{ uri: item.fileUrl }}
+            shouldPlay={false}
+            useNativeControls={true}
+            style={{ width: 300, height: 50 }}
+          />
+        ) : (
+          <Text style={tw`${isSender ? 'text-white' : 'text-black'}`}>
+            {item.content} {item.isEdited && '(đã chỉnh sửa)'}
+          </Text>
+        )}
       </View>
     </TouchableOpacity>
 
@@ -582,28 +581,84 @@ const ChatScreen = ({ route }) => {
     }
   };
   // Tải xuống file và chia sẻ
-  const downloadFile = async (url, fileName = 'file.xyz') => {
-    try {
-      if (!url) {
-        Alert.alert("Lỗi", "Không tìm thấy đường dẫn file.");
-        return;
-      }
+  // const downloadFile = async (url, fileName = 'file.xyz') => {
+  //   try {
+  //     if (!url) {
+  //       Alert.alert("Lỗi", "Không tìm thấy đường dẫn file.");
+  //       return;
+  //     }
 
-      const localPath = FileSystem.documentDirectory + fileName;
-      const downloadResumable = FileSystem.createDownloadResumable(url, localPath);
-      const { uri } = await downloadResumable.downloadAsync();
+  //     const localPath = FileSystem.documentDirectory + fileName;
+  //     const downloadResumable = FileSystem.createDownloadResumable(url, localPath);
+  //     const { uri } = await downloadResumable.downloadAsync();
 
-      const canShare = await Sharing.isAvailableAsync();
-      if (canShare) {
-        await Sharing.shareAsync(uri);
-      } else {
-        await WebBrowser.openBrowserAsync(uri); // Fallback nếu không chia sẻ được
-      }
-    } catch (err) {
-      console.error('❌ Lỗi khi mở file:', err);
-      Alert.alert('Lỗi', 'Không thể mở file. Hãy kiểm tra định dạng hoặc thử lại sau.');
+  //     const canShare = await Sharing.isAvailableAsync();
+  //     if (canShare) {
+  //       await Sharing.shareAsync(uri);
+  //     } else {
+  //       await WebBrowser.openBrowserAsync(uri); // Fallback nếu không chia sẻ được
+  //     }
+  //   } catch (err) {
+  //     console.error('❌ Lỗi khi mở file:', err);
+  //     Alert.alert('Lỗi', 'Không thể mở file. Hãy kiểm tra định dạng hoặc thử lại sau.');
+  //   }
+  // };
+  // const downloadFile = async (url, fileName) => {
+  //   try {
+  //     if (!url) {
+  //       Alert.alert("Lỗi", "Không tìm thấy đường dẫn file.");
+  //       return;
+  //     }
+
+  //     const finalName = fileName || url.split("/").pop() || `file-${Date.now()}`;
+  //     const localUri = FileSystem.documentDirectory + finalName;
+
+  //     console.log("📥 Đang tải file:", finalName);
+
+  //     const downloadResumable = FileSystem.createDownloadResumable(url, localUri);
+  //     const { uri } = await downloadResumable.downloadAsync();
+
+  //     console.log("📂 File đã lưu:", uri);
+
+  //     const canShare = await Sharing.isAvailableAsync();
+  //     if (canShare) {
+  //       await Sharing.shareAsync(uri);
+  //     } else {
+  //       Alert.alert("Thiết bị không hỗ trợ mở file này");
+  //     }
+  //   } catch (err) {
+  //     console.error("❌ Lỗi mở file:", err.message);
+  //     Alert.alert("Lỗi", "Không thể mở file.");
+  //   }
+  // };
+  const downloadFile = async (url, fileName) => {
+  try {
+    if (!url) {
+      Alert.alert("Lỗi", "Không tìm thấy đường dẫn file.");
+      return;
     }
-  };
+
+    // ✅ Nếu không có tên file, fallback thành file từ URL
+    const finalName = fileName || url.split("/").pop() || `file-${Date.now()}`;
+
+    const localPath = FileSystem.documentDirectory + finalName;
+
+    const downloadResumable = FileSystem.createDownloadResumable(url, localPath);
+    const { uri } = await downloadResumable.downloadAsync();
+
+    const canShare = await Sharing.isAvailableAsync();
+    if (canShare) {
+      await Sharing.shareAsync(uri);
+    } else {
+      Alert.alert('Thiết bị không hỗ trợ mở file này');
+    }
+  } catch (err) {
+    console.error('❌ Lỗi khi mở file:', err);
+    Alert.alert('Lỗi', 'Không thể mở file. Hãy kiểm tra định dạng hoặc thử lại sau.');
+  }
+};
+
+  
   // Chọn ảnh từ thư viện
   const pickImage = async () => {
     const result = await ImagePicker.launchImageLibraryAsync({
@@ -624,36 +679,53 @@ const ChatScreen = ({ route }) => {
     }
   };
   // Chọn tài liệu (PDF, DOCX, v.v.)
+  // const pickDocument = async () => {
+  //   const result = await DocumentPicker.getDocumentAsync({});
+  //   if (!result.canceled && result.assets?.length > 0) {
+  //     const asset = result.assets[0];
+  //     sendMessageWithFile({ uri: asset.uri, name: asset.name, type: asset.mimeType || 'application/octet-stream' });
+  //   }
+  // };
+  // // Chọn tệp âm thanh (MP3 hoặc các định dạng khác)
+  // const pickAudioFile = async () => {
+  //   const result = await DocumentPicker.getDocumentAsync({
+  //     type: 'audio/*', // Chỉ cho phép chọn tệp âm thanh
+  //   });
+
+  //   if (result.type === 'success') {
+  //     const file = result.files[0];
+
+  //     // Kiểm tra nếu tệp là MP3 hoặc các định dạng âm thanh khác
+  //     if (file.mimeType && file.mimeType.startsWith('audio/')) {
+  //       setSelectedFile(file); // Lưu tệp âm thanh vào state
+  //     } else {
+  //       Alert.alert('Lỗi', 'Chỉ có thể tải lên tệp âm thanh (MP3)');
+  //     }
+  //   } else {
+  //     Alert.alert('Lỗi', 'Không có tệp nào được chọn');
+  //   }
+  // };
   const pickDocument = async () => {
-    const result = await DocumentPicker.getDocumentAsync({});
-    if (!result.canceled && result.assets?.length > 0) {
-      const asset = result.assets[0];
-      sendMessageWithFile({ uri: asset.uri, name: asset.name, type: asset.mimeType || 'application/octet-stream' });
-    }
-  };
-  // Chọn tệp âm thanh (MP3 hoặc các định dạng khác)
-  const pickAudioFile = async () => {
-    const result = await DocumentPicker.getDocumentAsync({
-      type: 'audio/*', // Chỉ cho phép chọn tệp âm thanh
+  const result = await DocumentPicker.getDocumentAsync({
+    copyToCacheDirectory: true,
+    type: "*/*", // Cho phép tất cả định dạng
+  });
+
+  if (!result.canceled && result.assets?.length > 0) {
+    const asset = result.assets[0];
+
+    sendMessageWithFile({
+      uri: asset.uri,
+      name: asset.name,
+      type: asset.mimeType || 'application/vnd.openxmlformats-officedocument.wordprocessingml.document',
     });
+  }
+};
 
-    if (result.type === 'success') {
-      const file = result.files[0];
-
-      // Kiểm tra nếu tệp là MP3 hoặc các định dạng âm thanh khác
-      if (file.mimeType && file.mimeType.startsWith('audio/')) {
-        setSelectedFile(file); // Lưu tệp âm thanh vào state
-      } else {
-        Alert.alert('Lỗi', 'Chỉ có thể tải lên tệp âm thanh (MP3)');
-      }
-    } else {
-      Alert.alert('Lỗi', 'Không có tệp nào được chọn');
-    }
-  };
   // Gửi tin nhắn với file (ảnh, tài liệu, video, âm thanh)
   const sendMessageWithFile = async (file) => {
     const type = file.type.startsWith('image/') ? 'image' : 'file';
-
+    console.log("📤 file upload:", file);
     const temp = {
       _id: `local-${Date.now()}`,
       sender: { _id: currentUserId },
@@ -671,6 +743,7 @@ const ChatScreen = ({ route }) => {
     scrollToBottom();
 
     const formData = new FormData();
+
     formData.append('chatId', chatId);
     formData.append('type', type);
     formData.append('file', {
@@ -678,6 +751,11 @@ const ChatScreen = ({ route }) => {
       name: file.name,
       type: file.type || 'application/octet-stream',
     });
+
+    // ✅ Sau khi append xong mới log
+    for (let [key, value] of formData.entries()) {
+      console.log("🧾 FormData:", key, value);
+    }
 
     try {
       const res = await axios.post(`${API_URL}/api/message`, formData, {
@@ -805,10 +883,10 @@ const ChatScreen = ({ route }) => {
                 setEditingMessageId(msg._id);
                 setText(msg.content);
               }}
-              onDownload={downloadFile}
               selectedMessageId={selectedMessageId}
               setSelectedMessageId={setSelectedMessageId}
-              onForward={handleForward}
+              navigation={navigation}
+              onDownload={downloadFile}
             />
           )}
           contentContainerStyle={tw`p-3 pb-24`}

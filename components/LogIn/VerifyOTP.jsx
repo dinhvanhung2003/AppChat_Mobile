@@ -1,7 +1,7 @@
 import React, { useState } from 'react';
 import { View, Text, TextInput, TouchableOpacity, Alert } from 'react-native';
 
-const API_URL = 'http://192.168.194.24:5000'; 
+const API_URL = 'http://192.168.88.179:5000'; 
 
 const VerifyOtpScreen = ({ route, navigation }) => {
   const { email } = route.params;
