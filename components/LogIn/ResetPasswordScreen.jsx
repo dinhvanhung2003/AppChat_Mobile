@@ -1,7 +1,7 @@
 import React, { useState } from 'react';
 import { View, TextInput, TouchableOpacity, Text, Alert } from 'react-native';
 
-const API_URL = 'http://192.168.88.179:5000';
+import { API_URL } from '../../configs/api';
 
 const ResetPasswordScreen = ({ route, navigation }) => {
   const { email, otp } = route.params;

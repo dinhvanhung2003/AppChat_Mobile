@@ -1,6 +1,6 @@
 import React, { useEffect, useState, useRef } from 'react';
 import {
-  View, Text, FlatList, TouchableOpacity, TextInput, Alert,
+  View, Text, FlatList, TouchableOpacity, TextInput, Alert, Image,
 } from 'react-native';
 import AsyncStorage from '@react-native-async-storage/async-storage';
 import axios from 'axios';
@@ -17,32 +17,14 @@ const GroupCreateScreen = () => {
   const [userId, setUserId] = useState('');
   const [friends, setFriends] = useState([]);
   const [selected, setSelected] = useState([]);
+  const [selectedUsers, setSelectedUsers] = useState([]);
   const [groupName, setGroupName] = useState('');
-  const navigation = useNavigation();
-  const [selectedUsers, setSelectedUsers] = useState([]); // chứa user object
   const [isCreating, setIsCreating] = useState(false);
-
-
-  // them khi chua la ban be 
   const [searchText, setSearchText] = useState('');
   const [searchResults, setSearchResults] = useState([]);
 
-
-  // xu ly tim kiem 
-  const handleSearch = async () => {
-    if (!searchText.trim()) return;
-
-    try {
-      const res = await axios.get(`${API_URL}/users?search=${searchText}`, {
-        headers: { Authorization: `Bearer ${token}` },
-      });
-      setSearchResults(Array.isArray(res.data) ? res.data : res.data.users || []);
-
-    } catch (error) {
-      console.error('❌ Lỗi tìm kiếm:', error.response?.data || error.message);
-      Alert.alert('Lỗi', 'Không thể tìm kiếm người dùng.');
-    }
-  };
+  const navigation = useNavigation();
+  const creatingLock = useRef(false);
 
   useEffect(() => {
     const fetchData = async () => {
@@ -62,21 +44,33 @@ const GroupCreateScreen = () => {
     fetchData();
   }, []);
 
-  const toggleSelect = (uid, userObj) => {
+  const handleSearch = async () => {
+    if (!searchText.trim()) return;
+    try {
+      const res = await axios.get(`${API_URL}/users?search=${searchText}`, {
+        headers: { Authorization: `Bearer ${token}` },
+      });
+      const results = Array.isArray(res.data) ? res.data : res.data.users || [];
+      setSearchResults(results.filter(u => u._id !== userId)); // không cho chọn chính mình
+    } catch (error) {
+      console.error('❌ Lỗi tìm kiếm:', error.response?.data || error.message);
+      Alert.alert('Lỗi', 'Không thể tìm kiếm người dùng.');
+    }
+  };
+
+  const toggleSelect = (uid, userObj = {}) => {
     if (uid === userId) return;
 
-    setSelected((prev) =>
-      prev.includes(uid)
-        ? prev.filter((id) => id !== uid)
-        : [...prev, uid]
+    setSelected(prev =>
+      prev.includes(uid) ? prev.filter(id => id !== uid) : [...prev, uid]
     );
 
-    setSelectedUsers((prev) => {
-      const exists = prev.some((u) => u._id === uid);
+    setSelectedUsers(prev => {
+      const exists = prev.some(u => u._id === uid);
       if (exists) {
-        return prev.filter((u) => u._id !== uid);
+        return prev.filter(u => u._id !== uid);
       } else {
-        return [...prev, userObj];
+        return [...prev, { ...userObj, _id: uid }];
       }
     });
 
@@ -84,41 +78,19 @@ const GroupCreateScreen = () => {
     setSearchText('');
   };
 
-
-
-  const creatingLock = useRef(false);
-
-
   const handleCreateGroup = async () => {
     if (creatingLock.current || isCreating) return;
     creatingLock.current = true;
     setIsCreating(true);
 
-
-    // Kiểm tra điều kiện
     if (selected.length < 2 || !groupName.trim()) {
       Alert.alert('Lỗi', 'Cần ít nhất 2 thành viên và tên nhóm');
-      return;
-    }
-    if (!groupName.trim()) {
-      Alert.alert('Thiếu thông tin', 'Vui lòng nhập tên nhóm.');
       creatingLock.current = false;
       setIsCreating(false);
       return;
     }
-
-    if (selected.length < 2) {
-      Alert.alert('Không đủ thành viên', 'Cần chọn ít nhất 2 người để tạo nhóm.');
-      creatingLock.current = false;
-      setIsCreating(false);
-      return;
-    }
-
-
-
 
     try {
-
       const res = await axios.post(
         `${API_URL}/api/chat/group`,
         {
@@ -132,7 +104,6 @@ const GroupCreateScreen = () => {
 
       const groupChat = res.data;
 
-      // ✅ Sau khi tạo nhóm thì gửi tin nhắn thông báo vào nhóm
       const systemMessage = {
         chatId: groupChat._id,
         content: 'Bạn đã được thêm vào nhóm',
@@ -143,7 +114,6 @@ const GroupCreateScreen = () => {
         headers: { Authorization: `Bearer ${token}` },
       });
 
-      // ✅ Emit socket tạo nhóm + tin nhắn hệ thống
       socket.emit('group:new', groupChat);
       socket.emit('newMessage', messageRes.data);
 
@@ -153,11 +123,10 @@ const GroupCreateScreen = () => {
       console.error('❌ Lỗi tạo nhóm:', err?.response?.data || err.message);
       Alert.alert('Lỗi', 'Không thể tạo nhóm.');
     } finally {
-      setIsCreating(false); // 👈 luôn reset
+      setIsCreating(false);
     }
   };
 
-  // renderItem
   const renderItem = ({ item }) => (
     <TouchableOpacity
       onPress={() => toggleSelect(item._id, item)}
@@ -165,7 +134,9 @@ const GroupCreateScreen = () => {
     >
       <View style={tw`w-10 h-10 rounded-full bg-gray-300 mr-3`} />
       <View style={tw`flex-1`}>
-        <Text style={tw`text-base font-semibold`}>{item.fullName}</Text>
+        <Text style={tw`text-base font-semibold`}>
+          {item.fullName || item.name || item.email}
+        </Text>
         <Text style={tw`text-sm text-gray-500`}>{item.email}</Text>
       </View>
       <Text style={tw`text-xl`}>
@@ -173,9 +144,6 @@ const GroupCreateScreen = () => {
       </Text>
     </TouchableOpacity>
   );
-
-
-
 
   return (
     <View style={tw`flex-1 pt-10 bg-gray-100`}>
@@ -193,13 +161,13 @@ const GroupCreateScreen = () => {
         </Text>
       )}
 
-      <Text style={tw`mx-4 mb-2 font-semibold`}>Chọn bạn bè:</Text>
+      <Text style={tw`mx-4 mb-2 font-semibold`}>Chọn thành viên:</Text>
       <View style={tw`flex-row items-center bg-white mx-4 px-3 py-2 rounded mb-2 border`}>
         <TextInput
           value={searchText}
           onChangeText={setSearchText}
           onSubmitEditing={handleSearch}
-          placeholder="Tìm người dùng (không cần là bạn bè)"
+          placeholder="Tìm người dùng..."
           style={tw`flex-1 text-black`}
         />
         <TouchableOpacity onPress={handleSearch}>
@@ -207,18 +175,18 @@ const GroupCreateScreen = () => {
         </TouchableOpacity>
       </View>
 
-     <FlatList
-  data={searchResults.length > 0 ? searchResults : friends}
-  keyExtractor={(item) => item._id}
-  renderItem={renderItem}
-  ListEmptyComponent={() => (
-    <Text style={tw`text-center mt-4 text-gray-500`}>
-      {searchText.trim()
-        ? (searchResults.length === 0 ? 'Không tìm thấy người dùng nào phù hợp.' : '')
-        : (friends.length === 0 ? 'Bạn chưa có bạn bè nào.' : '')}
-    </Text>
-  )}
-/>
+      <FlatList
+        data={searchResults.length > 0 ? searchResults : friends}
+        keyExtractor={(item) => item._id}
+        renderItem={renderItem}
+        ListEmptyComponent={() => (
+          <Text style={tw`text-center mt-4 text-gray-500`}>
+            {searchText.trim()
+              ? (searchResults.length === 0 ? 'Không tìm thấy người dùng nào phù hợp.' : '')
+              : (friends.length === 0 ? 'Bạn chưa có bạn bè nào.' : '')}
+          </Text>
+        )}
+      />
 
       {selectedUsers.length > 0 && (
         <View style={tw`bg-white mx-4 my-3 p-3 rounded-xl border`}>
@@ -229,7 +197,9 @@ const GroupCreateScreen = () => {
                 key={user._id}
                 style={tw`flex-row items-center bg-blue-100 px-3 py-1 rounded-full mr-2 mb-2`}
               >
-                <Text style={tw`text-sm text-blue-800 mr-1`}>{user.fullName}</Text>
+                <Text style={tw`text-sm text-blue-800 mr-1`}>
+                  {user.fullName || user.name || user.email}
+                </Text>
                 <TouchableOpacity onPress={() => toggleSelect(user._id, user)}>
                   <Text style={tw`text-blue-600 text-xs`}>✕</Text>
                 </TouchableOpacity>
@@ -238,10 +208,6 @@ const GroupCreateScreen = () => {
           </View>
         </View>
       )}
-
-
-
-
 
       <TouchableOpacity
         onPress={handleCreateGroup}
@@ -252,7 +218,6 @@ const GroupCreateScreen = () => {
           {isCreating ? 'Đang tạo nhóm...' : '✅ Tạo nhóm'}
         </Text>
       </TouchableOpacity>
-
     </View>
   );
 };

@@ -9,8 +9,8 @@ import { useNavigation } from '@react-navigation/native';
 import { io } from 'socket.io-client';
 import tw from 'twrnc';
 import { Ionicons } from '@expo/vector-icons';
+import { API_URL } from '../../configs/api';
 
-import { API_URL } from '../../configs/api'; 
 const socket = io(API_URL, { transports: ['websocket'] });
 
 const GroupListScreen = () => {
@@ -32,19 +32,19 @@ const GroupListScreen = () => {
     fetchToken();
   }, []);
 
-  useEffect(() => {
-    const fetchGroups = async () => {
-      try {
-        const res = await axios.get(`${API_URL}/api/chat`, {
-          headers: { Authorization: `Bearer ${token}` },
-        });
-        const groupChats = res.data.filter((chat) => chat.isGroupChat);
-        setGroups(groupChats);
-      } catch (err) {
-        console.error('❌ Lỗi lấy nhóm:', err);
-      }
-    };
+  const fetchGroups = async () => {
+    try {
+      const res = await axios.get(`${API_URL}/api/chat`, {
+        headers: { Authorization: `Bearer ${token}` },
+      });
+      const groupChats = res.data.filter((chat) => chat.isGroupChat);
+      setGroups(groupChats);
+    } catch (err) {
+      console.error('❌ Lỗi lấy nhóm:', err);
+    }
+  };
 
+  useEffect(() => {
     if (token) fetchGroups();
   }, [token]);
 
@@ -60,6 +60,10 @@ const GroupListScreen = () => {
       setGroups((prev) => prev.filter((g) => g._id !== chatId));
     });
 
+    socket.on('group:removed', (chatId) => {
+      setGroups((prev) => prev.filter((g) => g._id !== chatId));
+    });
+
     socket.on('group:updated', (updatedGroup) => {
       setGroups((prev) =>
         prev.map((g) => (g._id === updatedGroup._id ? updatedGroup : g))
@@ -70,6 +74,7 @@ const GroupListScreen = () => {
       socket.off('group:new');
       socket.off('group:deleted');
       socket.off('group:updated');
+      socket.off('group:removed');
     };
   }, []);
 
@@ -87,16 +92,16 @@ const GroupListScreen = () => {
       onPress={() => handleSelectGroup(item)}
       style={tw`flex-row items-center p-4 bg-white border-b border-gray-200`}
     >
-     {item.groupAvatar ? (
-  <Image
-    source={{ uri: item.groupAvatar }}
-    style={tw`w-12 h-12 rounded-full`}
-  />
-) : (
-  <View style={tw`w-12 h-12 bg-blue-200 rounded-full items-center justify-center`}>
-    <Ionicons name="people" size={24} color="#2563EB" />
-  </View>
-)}
+      {item.groupAvatar ? (
+        <Image
+          source={{ uri: item.groupAvatar }}
+          style={tw`w-12 h-12 rounded-full`}
+        />
+      ) : (
+        <View style={tw`w-12 h-12 bg-blue-200 rounded-full items-center justify-center`}>
+          <Ionicons name="people" size={24} color="#2563EB" />
+        </View>
+      )}
 
       <View style={tw`ml-4 flex-1`}>
         <Text style={tw`text-base font-semibold text-black`}>{item.chatName}</Text>
