@@ -21,62 +21,75 @@ import { Button } from 'react-native';
 import { API_URL } from '../../configs/api';
 const socket = io(API_URL, { transports: ['websocket'] });
 
-const ChatMessage = memo(({ item, isSender, onRecall, onDelete, onEdit, onDownload, selectedMessageId, setSelectedMessageId, onForward }) => (
-
-
-
-
+const ChatMessage = memo(({ item, isSender, onRecall, onDelete, onEdit, onDownload, selectedMessageId, setSelectedMessageId, onForward, navigation }) => {
+  console.log("💡 Sender info:", item.sender);
+  return (
   <View style={tw`mb-2 px-2`}>
     <TouchableOpacity
       activeOpacity={0.9}
-      onPress={() => {
+      onLongPress={() => {
         setSelectedMessageId(selectedMessageId === item._id ? null : item._id);
       }}
     >
       <View style={tw`flex-row ${isSender ? 'justify-end' : 'justify-start'} items-end mb-2 px-2`}>
         {/* Avatar chỉ hiển thị với người nhận (không phải mình) */}
-        {!isSender && item.sender?.avatar && (
-          <Image source={item.sender.avatar} style={tw`w-8 h-8 rounded-full mr-2`} />
-
+        {!isSender && (
+          <Image
+            source={{ uri: item.sender?.avatar || 'https://cdn-icons-png.flaticon.com/512/149/149071.png' }}
+            style={tw`w-8 h-8 rounded-full mr-2 border border-gray-300`}
+            resizeMode="cover"
+          />
         )}
 
-        <View style={tw`max-w-[75%] px-3 py-2 rounded-xl ${isSender ? 'bg-blue-500' : 'bg-gray-200'}`}>
-          {!isSender && item.sender?.fullName && (
-            <Text style={tw`text-xs text-gray-500 mb-1`}>{item.sender.fullName}</Text>
-          )}
-
-          {item.isRecalled ? (
-            <Text style={tw`italic text-gray-400`}>[Tin nhắn đã thu hồi]</Text>
-          ) : item.type === 'image' ? (
-            <Image source={{ uri: item.fileUrl }} style={tw`w-60 h-60 rounded-lg`} />
-          ) : item.type === 'file' ? (
-            <TouchableOpacity onPress={() => onDownload(item.fileUrl, item.fileName)}>
-              <Text style={tw`${isSender ? 'text-white' : 'text-black'}`}>{item.fileName}</Text>
-            </TouchableOpacity>
-          ) : item.type === 'video' ? (
-            <Video
-              source={{ uri: item.fileUrl }}
-              rate={1.0}
-              volume={1.0}
-              isMuted={false}
-              resizeMode="contain"
-              shouldPlay={false}
-              useNativeControls={true}
-              style={tw`w-60 h-60 rounded-lg`}
-            />
-          ) : item.type === 'audio' ? (
-            <Audio
-              source={{ uri: item.fileUrl }}
-              shouldPlay={false}
-              useNativeControls={true}
-              style={{ width: 300, height: 50 }}
-            />
-          ) : (
-            <Text style={tw`${isSender ? 'text-white' : 'text-black'}`}>
-              {item.content} {item.isEdited && '(đã chỉnh sửa)'}
+        <View style={tw`max-w-[75%]`}>
+          <View style={tw`px-3 py-2 rounded-xl ${isSender ? 'bg-blue-500' : 'bg-gray-200'}`}>
+            {!isSender && item.sender?.fullName && (
+              <Text style={tw`text-xs text-gray-500 mb-1`}>{item.sender.fullName}</Text>
+            )}
+            {item.isRecalled ? (
+              <Text style={tw`italic text-gray-400`}>[Tin nhắn đã thu hồi]</Text>
+            ) : item.type === 'image' ? (
+              <TouchableOpacity onPress={() => navigation.navigate('ImageViewer', { imageUrl: item.fileUrl })}>
+                <Image source={{ uri: item.fileUrl }} style={tw`w-60 h-60 rounded-lg`} />
+              </TouchableOpacity>
+            ) : item.type === 'file' ? (
+              <TouchableOpacity onPress={() => onDownload(item.fileUrl, item.fileName)}>
+                <Text style={tw`underline ${isSender ? 'text-white' : 'text-black'}`}>
+                  {item.fileName || 'Không có tên file'}
+                </Text>
+              </TouchableOpacity>
+            ) : item.type === 'video' ? (
+              <Video
+                source={{ uri: item.fileUrl }}
+                rate={1.0}
+                volume={1.0}
+                isMuted={false}
+                resizeMode="contain"
+                shouldPlay={false}
+                useNativeControls={true}
+                style={tw`w-60 h-60 rounded-lg`}
+              />
+            ) : item.type === 'audio' ? (
+              <Audio
+                source={{ uri: item.fileUrl }}
+                shouldPlay={false}
+                useNativeControls={true}
+                style={{ width: 300, height: 50 }}
+              />
+            ) : (
+              <Text style={tw`${isSender ? 'text-white' : 'text-black'}`}>
+                {item.content} {item.isEdited && '(đã chỉnh sửa)'}
+              </Text>
+            )}
+          </View>
+          {/* Thời gian */}
+          <View style={tw`px-3 mt-1 ${isSender ? 'items-end' : 'items-start'}`}>
+            <Text style={tw`text-[10px] text-gray-400`}>
+              {new Date(item.createdAt).toLocaleTimeString('vi-VN', { hour: '2-digit', minute: '2-digit' })}
             </Text>
-          )}
+          </View>
         </View>
+
       </View>
     </TouchableOpacity>
 
@@ -111,7 +124,7 @@ const ChatMessage = memo(({ item, isSender, onRecall, onDelete, onEdit, onDownlo
     )}
 
   </View>
-));
+)});
 
 const ChatScreen = ({ route }) => {
   const { chatId, partner, chatName, isGroup = false, group = null } = route.params;
@@ -454,6 +467,7 @@ const ChatScreen = ({ route }) => {
   };
   useEffect(() => {
     if (route.params?.group && isGroup) {
+      console.log('✅ Nhận group từ route:', route.params.group);
       setGroupData(route.params.group); // ✅ đúng state đang dùng
     }
   }, [route.params?.group]);
@@ -604,14 +618,18 @@ const ChatScreen = ({ route }) => {
     }
   };
   // Tải xuống file và chia sẻ
-  const downloadFile = async (url, fileName = 'file.xyz') => {
+  const downloadFile = async (url, fileName) => {
     try {
       if (!url) {
         Alert.alert("Lỗi", "Không tìm thấy đường dẫn file.");
         return;
       }
 
-      const localPath = FileSystem.documentDirectory + fileName;
+      // ✅ Nếu không có tên file, fallback thành file từ URL
+      const finalName = fileName || url.split("/").pop() || `file-${Date.now()}`;
+
+      const localPath = FileSystem.documentDirectory + finalName;
+
       const downloadResumable = FileSystem.createDownloadResumable(url, localPath);
       const { uri } = await downloadResumable.downloadAsync();
 
@@ -619,7 +637,7 @@ const ChatScreen = ({ route }) => {
       if (canShare) {
         await Sharing.shareAsync(uri);
       } else {
-        await WebBrowser.openBrowserAsync(uri); // Fallback nếu không chia sẻ được
+        Alert.alert('Thiết bị không hỗ trợ mở file này');
       }
     } catch (err) {
       console.error('❌ Lỗi khi mở file:', err);
@@ -759,6 +777,16 @@ const ChatScreen = ({ route }) => {
     <KeyboardAvoidingView style={tw`flex-1 bg-white`} behavior={Platform.OS === 'ios' ? 'padding' : 'height'} keyboardVerticalOffset={Platform.OS === 'ios' ? 80 : 20}>
       <View style={tw`flex-row items-center justify-between px-4 py-3 bg-blue-500 mt-10`}>
         <View style={tw`flex-row items-center`}>
+          <Image
+            source={{
+              uri: isGroup
+                ? groupData?.groupAvatar || 'https://icon-library.com/images/group-icon/group-icon-0.jpg'
+                : partner?.avatar || 'https://cdn-icons-png.flaticon.com/512/149/149071.png',
+            }}
+            style={tw`w-8 h-8 rounded-full mr-2 border border-white`}
+            resizeMode="cover"
+          />
+          
           <Text style={tw`text-white text-lg font-bold mr-3`}>
             {isGroup ? route.params.chatName : (partner?.fullName || 'Đang trò chuyện')}
           </Text>
@@ -831,6 +859,7 @@ const ChatScreen = ({ route }) => {
               selectedMessageId={selectedMessageId}
               setSelectedMessageId={setSelectedMessageId}
               onForward={handleForward}
+              navigation={navigation}
             />
           )}
           contentContainerStyle={tw`p-3 pb-24`}
@@ -897,24 +926,5 @@ const ChatScreen = ({ route }) => {
     </KeyboardAvoidingView>
   );
 };
-// const styles = StyleSheet.create({
-//   container: {
-//     flex: 1,
-//     justifyContent: 'space-around',
-//     alignItems: 'center',
-//     backgroundColor: 'black',
-//   },
-//   local: {
-//     width: 120,
-//     height: 160,
-//     position: 'absolute',
-//     top: 40,
-//     right: 20,
-//     zIndex: 2,
-//   },
-//   remote: {
-//     width: '100%',
-//     height: '60%',
-//   },
-// });
+
 export default ChatScreen;

@@ -2,8 +2,8 @@ import React, { useState } from "react";
 import { View, Text, TextInput, TouchableOpacity, Alert } from "react-native";
 import AsyncStorage from "@react-native-async-storage/async-storage";
 import tw from "twrnc";
+import { API_URL } from '../../configs/api'; 
 
-const API_URL = "http://192.168.88.179:5000";
 
 const OtpLoginScreen = ({ route, navigation }) => {
   const { email } = route.params;

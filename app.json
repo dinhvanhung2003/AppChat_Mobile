@@ -15,6 +15,9 @@
     ],
     "android": {
       "package": "com.anonymous.musicapp"
+    },
+    "experimental": {
+      "newArchEnabled": true
     }
   }
 }
