@@ -24,6 +24,34 @@ const PhoneBook = () => {
   const [currentUserId, setCurrentUserId] = useState('');
   const [token, setToken] = useState('');
   const navigation = useNavigation();
+const initiateVideoCall = async (friendId, navigation) => {
+  try {
+    const token = await AsyncStorage.getItem('token');
+    const userJson = await AsyncStorage.getItem('user');
+    const user = JSON.parse(userJson);
+
+    const res = await axios.post(
+      `${API_URL}/api/daily/create-room`,
+      {
+        conversationId: friendId,
+        fromUser: {
+          _id: user._id,
+          fullName: user.fullName,
+        },
+        toUserId: friendId,
+      },
+      {
+        headers: { Authorization: `Bearer ${token}` },
+      }
+    );
+
+    const url = `${res.data.url}?userName=${encodeURIComponent(user.fullName)}`;
+    navigation.navigate('DailyCallScreen', { url });
+  } catch (err) {
+    console.error('Gọi thất bại:', err);
+    Alert.alert('Không thể gọi video');
+  }
+};
 
   useEffect(() => {
     const init = async () => {
@@ -178,18 +206,26 @@ const PhoneBook = () => {
         </TouchableOpacity>
       )}
     >
-      <TouchableOpacity
-        onPress={() => handleChatWithFriend(item._id)}
-        style={tw`flex-row items-center justify-between p-4 border-b border-gray-300 bg-white`}
-      >
-        <View style={tw`flex-row items-center`}>
-          <Image
-            source={{ uri: item.avatar || 'https://i.pravatar.cc/100' }}
-            style={tw`w-12 h-12 rounded-full`}
-          />
-          <Text style={tw`ml-4 text-base font-semibold`}>{item.fullName}</Text>
-        </View>
-      </TouchableOpacity>
+     <TouchableOpacity
+  onPress={() => handleChatWithFriend(item._id)}
+  style={tw`flex-row items-center justify-between p-4 border-b border-gray-300 bg-white`}
+>
+  <View style={tw`flex-row items-center`}>
+    <Image
+      source={{ uri: item.avatar || 'https://i.pravatar.cc/100' }}
+      style={tw`w-12 h-12 rounded-full`}
+    />
+    <Text style={tw`ml-4 text-base font-semibold`}>{item.fullName}</Text>
+  </View>
+
+  <TouchableOpacity
+    onPress={() => initiateVideoCall(item._id, navigation)}
+    style={tw`ml-4`}
+  >
+    <Ionicons name="videocam-outline" size={24} color="#007AFF" />
+  </TouchableOpacity>
+</TouchableOpacity>
+
     </Swipeable>
   );
 

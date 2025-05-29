@@ -45,25 +45,35 @@ const MessageListScreen = () => {
   }, [token]);
 
 
+useEffect(() => {
+  const handleFriendOnline = ({ userId }) => {
+    setOnlineUsers(prev => Array.from(new Set([...prev, userId])));
+  };
+
+  const handleFriendOffline = ({ userId }) => {
+    setOnlineUsers(prev => prev.filter(id => id !== userId));
+  };
+
+  socket.on('friendOnline', handleFriendOnline);
+  socket.on('friendOffline', handleFriendOffline);
+
+  return () => {
+    socket.off('friendOnline', handleFriendOnline);
+    socket.off('friendOffline', handleFriendOffline);
+  };
+}, []);
 
 
+useEffect(() => {
+  const handleInitial = ({ userIds }) => {
+    setOnlineUsers(userIds);
+  };
+
+  socket.on("initialOnlineFriends", handleInitial);
+  return () => socket.off("initialOnlineFriends", handleInitial);
+}, []);
 
 
-  // Lấy danh sách người dùng online
-  useEffect(() => {
-    socket.on('userOnline', (userId) => {
-      setOnlineUsers((prev) => [...new Set([...prev, userId])]);
-    });
-
-    socket.on('userOffline', (userId) => {
-      setOnlineUsers((prev) => prev.filter((id) => id !== userId));
-    });
-
-    return () => {
-      socket.off('userOnline');
-      socket.off('userOffline');
-    };
-  }, []);
 
 
 
@@ -301,9 +311,10 @@ const MessageListScreen = () => {
       >
         <View style={tw`relative`}>
           <Image source={{ uri: displayAvatar }} style={tw`w-12 h-12 rounded-full`} />
-          {isOnline && (
-            <View style={tw`w-3 h-3 bg-green-500 rounded-full absolute bottom-0 right-0 border border-white`} />
-          )}
+          { isOnline && (
+  <View style={tw`w-3 h-3 bg-green-500 rounded-full absolute bottom-0 right-0 border border-white`} />
+)}
+
         </View>
         <View style={tw`ml-3 flex-1`}>
           <Text style={tw`text-base font-semibold`}>{item.fullName}</Text>

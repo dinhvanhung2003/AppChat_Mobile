@@ -24,6 +24,7 @@ import ImageViewerScreen from './components/MessageScreen/ImageViewerScreen';
 import SearchFriendScreen from './components/PhoneBook/SearchFriendScreen';
 import GroupMemberScreen from './components/MessageScreen/GroupMemberScreen';
 import GroupAddMemberScreen from './components/MessageScreen/GroupAddMemberScreen';
+import DailyCallScreen from './components/MessageScreen/DailyCallScreen';
 const Stack = createStackNavigator();
 
 export default function App() {
@@ -54,6 +55,8 @@ export default function App() {
         
         <Stack.Screen name="GroupAddMemberScreen" component={GroupAddMemberScreen} />
         <Stack.Screen name="GroupMemberScreen" component={GroupMemberScreen} />
+
+        <Stack.Screen name="DailyCallScreen" component={DailyCallScreen} />
       </Stack.Navigator>
     </NavigationContainer>
   );

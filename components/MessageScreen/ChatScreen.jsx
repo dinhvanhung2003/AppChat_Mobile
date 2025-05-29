@@ -17,7 +17,7 @@ import { useNavigation } from '@react-navigation/native';
 import { Video, Audio } from 'expo-av';
 // import { mediaDevices, RTCPeerConnection, RTCView, RTCSessionDescription, RTCIceCandidate } from 'react-native-webrtc';
 import { Button } from 'react-native';
-
+import AudioPlayer from './AudioPlayer'
 import { API_URL } from '../../configs/api';
 const socket = io(API_URL, { transports: ['websocket'] });
 
@@ -70,19 +70,21 @@ const ChatMessage = memo(({ item, isSender, onRecall, onDelete, onEdit, onDownlo
                 style={tw`w-60 h-60 rounded-lg`}
               />
             ) : item.type === 'audio' ? (
-              <Audio
-                source={{ uri: item.fileUrl }}
-                shouldPlay={false}
-                useNativeControls={true}
-                style={{ width: 300, height: 50 }}
-              />
+              // <TouchableOpacity onPress={async () => {
+              //   const { sound } = await Audio.Sound.createAsync({ uri: item.fileUrl });
+              //   await sound.playAsync();
+              // }}>
+              //   <Text style={tw`${isSender ? 'text-white' : 'text-black'} underline`}>Phát âm thanh</Text>
+              // </TouchableOpacity>
+              <AudioPlayer uri={item.fileUrl} isSender={isSender} />
+
             ) : (
               <Text style={tw`${isSender ? 'text-white' : 'text-black'}`}>
                 {item.content} {item.isEdited && '(đã chỉnh sửa)'}
               </Text>
             )}
           </View>
-          {/* Thời gian */}
+{/* Thời gian */}
           <View style={tw`px-3 mt-1 ${isSender ? 'items-end' : 'items-start'}`}>
             <Text style={tw`text-[10px] text-gray-400`}>
               {new Date(item.createdAt).toLocaleTimeString('vi-VN', { hour: '2-digit', minute: '2-digit' })}
@@ -569,13 +571,13 @@ const ChatScreen = ({ route }) => {
     socket.on('newMessage', handleMessage);
     socket.on('messageReceived', handleMessage);
     socket.on('messageEdited', handleEdit);
-    socket.on('messageRecalled', handleRecall);
+    socket.on('recallMessage', handleRecall);
 
     return () => {
       socket.off('newMessage', handleMessage);
       socket.off('messageReceived', handleMessage);
       socket.off('messageEdited', handleEdit);
-      socket.off('messageRecalled', handleRecall);
+      socket.off('recallMessage', handleRecall);
     };
   }, [chatId]);
   // Gửi tin nhắn
@@ -691,9 +693,15 @@ const ChatScreen = ({ route }) => {
     }
   };
   // Gửi tin nhắn với file (ảnh, tài liệu, video, âm thanh)
-  const sendMessageWithFile = async (file) => {
-    const type = file.type.startsWith('image/') ? 'image' : 'file';
+const sendMessageWithFile = async (file) => {
+    // const type = file.type.startsWith('image/') ? 'image' : 'file';
+    const fileInfo = await FileSystem.getInfoAsync(file.uri);
+    const localUri = fileInfo.exists ? fileInfo.uri : file.uri;
 
+    const type = file.type.startsWith('image/') ? 'image' :
+                 file.type.startsWith('audio/') ? 'audio' :
+                 file.type.startsWith('video/') ? 'video' :
+                 'file';
     const temp = {
       _id: `local-${Date.now()}`,
       sender: { _id: currentUserId },
@@ -714,7 +722,8 @@ const ChatScreen = ({ route }) => {
     formData.append('chatId', chatId);
     formData.append('type', type);
     formData.append('file', {
-      uri: file.uri,
+      uri: file.uri.startsWith('file://') ? file.uri : `file://${file.uri}`,
+      // uri: file.uri,
       name: file.name,
       type: file.type || 'application/octet-stream',
     });
@@ -730,9 +739,9 @@ const ChatScreen = ({ route }) => {
     } catch (err) {
       console.error("Gửi file lỗi:", err.message);
       Alert.alert('Lỗi', 'Không thể gửi file');
+      setMessages((prev) => prev.filter(msg => msg._id !== temp._id)); // rollback UI
     }
   };
-
 
 
   // Thu hồi tin nhắn
@@ -742,7 +751,7 @@ const ChatScreen = ({ route }) => {
       setMessages((prev) =>
         prev.map((m) => m._id === id ? { ...m, isRecalled: true } : m)
       );
-      socket.emit('messageRecalled', { _id: id });
+      socket.emit('recallMessage', id);
     } catch {
       Alert.alert('Lỗi', 'Không thể thu hồi tin nhắn');
     }
