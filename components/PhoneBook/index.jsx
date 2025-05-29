@@ -1,4 +1,4 @@
-import React, { useEffect, useState } from 'react';
+import React, { useEffect, useState,useRef } from 'react';
 import {
   View, Text, FlatList, TouchableOpacity, Image, Alert,
 } from 'react-native';
@@ -13,6 +13,10 @@ import NavigationBar from '../../components/MessageScreen/NavigationBar';
 import SearchBar from '../SearchBar';
 import { Swipeable } from 'react-native-gesture-handler';
 import { API_URL } from '../../configs/api';
+import { Camera } from 'expo-camera';
+import * as Audio from 'expo-av';
+import { Linking } from 'react-native';
+
 
 const socket = io(API_URL, { transports: ['websocket'] });
 
@@ -24,8 +28,31 @@ const PhoneBook = () => {
   const [currentUserId, setCurrentUserId] = useState('');
   const [token, setToken] = useState('');
   const navigation = useNavigation();
+
+
+
 const initiateVideoCall = async (friendId, navigation) => {
   try {
+    // 1. Yêu cầu quyền camera
+    const { status: cameraStatus } = await Camera.requestCameraPermissionsAsync();
+    const { status: audioStatus } = await Audio.Audio.requestPermissionsAsync();;
+
+    // 2. Kiểm tra quyền
+    if (cameraStatus !== 'granted' || audioStatus !== 'granted') {
+      return Alert.alert(
+        'Yêu cầu quyền',
+        'Bạn cần cấp quyền camera và micro để gọi video. Mở Cài đặt?',
+        [
+          { text: 'Huỷ', style: 'cancel' },
+          {
+            text: 'Mở Cài đặt',
+            onPress: () => Linking.openSettings(),
+          },
+        ]
+      );
+    }
+
+    // 3. Nếu được cấp quyền, tiếp tục gọi video
     const token = await AsyncStorage.getItem('token');
     const userJson = await AsyncStorage.getItem('user');
     const user = JSON.parse(userJson);
@@ -52,6 +79,7 @@ const initiateVideoCall = async (friendId, navigation) => {
     Alert.alert('Không thể gọi video');
   }
 };
+
 
   useEffect(() => {
     const init = async () => {

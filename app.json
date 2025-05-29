@@ -14,7 +14,11 @@
       "expo-font"
     ],
     "android": {
-      "package": "com.anonymous.musicapp"
+      "package": "com.anonymous.musicapp",
+      "permissions": [
+    "CAMERA",
+    "RECORD_AUDIO"
+  ]
     },
     "experimental": {
       "newArchEnabled": true

@@ -227,7 +227,7 @@ useEffect(() => {
       : otherUser?.avatar || 'https://via.placeholder.com/150';
 
     const isOnline = otherUser && onlineUsers.includes(otherUser._id);
-    console.log('🟢 Checking user:', otherUser?._id, 'Online:', isOnline);
+   
 
     return (
       <TouchableOpacity

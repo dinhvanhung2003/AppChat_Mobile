@@ -8,15 +8,18 @@ export default function DailyCallScreen({ route }) {
   return (
     <View style={{ flex: 1 }}>
       <WebView
-        source={{ uri: url }}
-        style={{ flex: 1 }}
-        javaScriptEnabled
-        mediaPlaybackRequiresUserAction={false}
-        allowsInlineMediaPlayback
-        allowsFullscreenVideo
-        originWhitelist={["*"]}
-        allowsProtectedMedia
-      />
+  source={{ uri: url }}
+  javaScriptEnabled
+  mediaPlaybackRequiresUserAction={false}
+  allowsInlineMediaPlayback
+  allowsFullscreenVideo
+  originWhitelist={['*']}
+  allowsProtectedMedia
+  /* Android đặc biệt cần thêm: */
+  androidHardwareAccelerationDisabled={false}
+  mediaCapturePermissionGrantType="grantIfSameHostElsePrompt"
+/>
+
     </View>
   );
 }
