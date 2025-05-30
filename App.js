@@ -1,6 +1,9 @@
-import React from 'react';
+import React, { useEffect } from 'react';
+import { Alert } from 'react-native';
+import { NavigationContainer, createNavigationContainerRef } from '@react-navigation/native';
 import { createStackNavigator } from '@react-navigation/stack';
-import { NavigationContainer } from '@react-navigation/native';
+import { io } from 'socket.io-client';
+import { API_URL } from './configs/api';
 import LaunchScreen from './components/LaunchScreen/index';
 import MessageScreen from './components/MessageScreen/MassageScreen';
 import PhoneBook from './components/PhoneBook/index';
@@ -25,9 +28,55 @@ import SearchFriendScreen from './components/PhoneBook/SearchFriendScreen';
 import GroupMemberScreen from './components/MessageScreen/GroupMemberScreen';
 import GroupAddMemberScreen from './components/MessageScreen/GroupAddMemberScreen';
 import DailyCallScreen from './components/MessageScreen/DailyCallScreen';
+import AsyncStorage from '@react-native-async-storage/async-storage';
+export const navigationRef = createNavigationContainerRef();
+const socket = io(API_URL, { transports: ['websocket'] });
+
 const Stack = createStackNavigator();
 
 export default function App() {
+  useEffect(() => {
+  const setupSocket = async () => {
+    try {
+      const userJson = await AsyncStorage.getItem('user');
+      const user = JSON.parse(userJson);
+      if (user && user._id) {
+        socket.emit('setup', user._id);
+      }
+    } catch (e) {
+      console.log('Lỗi khi lấy user từ AsyncStorage:', e);
+    }
+  };
+
+  setupSocket();
+
+  // Đặt socket.on ở ngoài để không bị gọi lại nhiều lần
+  const handleIncomingCall = ({ from, roomUrl }) => {
+    Alert.alert(
+      '📞 Cuộc gọi đến',
+      `${from.fullName} đang gọi cho bạn`,
+      [
+        { text: 'Từ chối', style: 'cancel' },
+        {
+          text: 'Chấp nhận',
+          onPress: () => {
+            const fullUrl = `${roomUrl}?userName=${encodeURIComponent(from.fullName)}`;
+            if (navigationRef.isReady()) {
+              navigationRef.navigate('DailyCallScreen', { url: fullUrl });
+            }
+          },
+        },
+      ]
+    );
+  };
+
+  socket.on('incomingVideoCall', handleIncomingCall);
+
+  return () => {
+    socket.off('incomingVideoCall', handleIncomingCall);
+  };
+}, []);
+
   return (
     <NavigationContainer>
       <Stack.Navigator initialRouteName="LaunchScreen" screenOptions={{ headerShown: false }}>

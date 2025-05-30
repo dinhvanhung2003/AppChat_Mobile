@@ -149,6 +149,38 @@ const GroupDetailScreen = () => {
     ]);
   };
 
+  const handleLeaveGroup = () => {
+  Alert.alert('Rời nhóm', 'Bạn chắc chắn muốn rời nhóm?', [
+    { text: 'Huỷ', style: 'cancel' },
+    {
+      text: 'Rời',
+      style: 'destructive',
+      onPress: async () => {
+        try {
+          const res = await axios.put(`${API_URL}/api/chat/groupremove`, {
+            chatId: groupData._id,
+            userId: userId, // tự remove chính mình
+          }, {
+            headers: { Authorization: `Bearer ${token}` },
+          });
+
+          socket.emit("group:updated", res.data);
+          socket.emit("group:removed", userId);
+
+          Alert.alert("🚪 Bạn đã rời khỏi nhóm");
+          navigation.goBack();
+        } catch (err) {
+          Alert.alert("❌ Lỗi", "Không thể rời nhóm");
+        }
+      }
+    }
+  ]);
+};
+
+
+
+
+
   return (
     <View style={tw`flex-1 bg-gray-100 pt-10 px-4`}>
       <Text style={tw`text-xl font-bold mb-4`}>Chi tiết nhóm</Text>
@@ -215,6 +247,19 @@ const GroupDetailScreen = () => {
           <Text style={tw`text-white text-center`}>🗑️ Giải tán nhóm</Text>
         </TouchableOpacity>
       )}
+
+      {!isAdmin && (
+  <TouchableOpacity
+    onPress={handleLeaveGroup}
+    style={tw`bg-gray-600 p-3 rounded`}
+  >
+    <Text style={tw`text-white text-center`}>🚪 Rời nhóm</Text>
+  </TouchableOpacity>
+)}
+
+
+
+
     </View>
   );
 };

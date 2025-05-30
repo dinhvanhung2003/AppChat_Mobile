@@ -215,16 +215,22 @@ const SearchFriendScreen = () => {
       {/* Tabs */}
       <View style={tw`flex-row justify-around border-b border-gray-300 bg-gray-100`}>
         {[
-          { key: 'search', label: 'Tìm kiếm' },
-          { key: 'sent', label: 'Đã gửi' },
-          { key: 'received', label: 'Lời mời tới' }
-        ].map(tab => (
-          <TouchableOpacity key={tab.key} onPress={() => setActiveTab(tab.key)} style={tw`flex-1`}>
-            <Text style={tw`text-center p-3 ${activeTab === tab.key ? 'border-b-2 border-blue-500 text-blue-500 font-bold' : 'text-gray-600'}`}>
-              {tab.label}
-            </Text>
-          </TouchableOpacity>
-        ))}
+  { key: 'search', label: 'Tìm kiếm' },
+  { key: 'sent', label: 'Đã gửi' },
+  { key: 'received', label: 'Lời mời tới' },
+].map(tab => (
+  <TouchableOpacity key={tab.key} onPress={() => setActiveTab(tab.key)} style={tw`flex-1 relative`}>
+    <Text style={tw`text-center p-3 ${activeTab === tab.key ? 'border-b-2 border-blue-500 text-blue-500 font-bold' : 'text-gray-600'}`}>
+      {tab.label}
+    </Text>
+
+    {tab.key === 'received' && receivedRequests.length > 0 && (
+      <View style={tw`absolute top-1 right-4 bg-red-500 rounded-full w-5 h-5 items-center justify-center`}>
+        <Text style={tw`text-white text-xs font-bold`}>{receivedRequests.length}</Text>
+      </View>
+    )}
+  </TouchableOpacity>
+))}
       </View>
 
       {/* Tìm kiếm */}
@@ -286,15 +292,15 @@ const SearchFriendScreen = () => {
         <FlatList
           data={receivedRequests}
           keyExtractor={(item) => item._id}
-          contentContainerStyle={tw`p-4`}
+          contentContainerStyle={tw`p-4 items-center`}
           renderItem={({ item }) =>
             renderUserItem(item, (
-              <View style={tw`flex-row`}>
+              <View style={tw`flex-row items-center justify-center `}>
                 <TouchableOpacity
                   onPress={() => acceptFriendRequest(item._id)}
                   style={tw`bg-blue-500 px-4 py-1.5 rounded-full mr-2`}
                 >
-                  <Text style={tw`text-white text-sm font-semibold`}>Chấp nhận</Text>
+                  <Text style={tw`text-white text-sx font-semibold`}>Chấp nhận</Text>
                 </TouchableOpacity>
                 <TouchableOpacity
                   onPress={() => rejectFriendRequest(item._id)}

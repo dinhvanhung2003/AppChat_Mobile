@@ -6,7 +6,7 @@ import AsyncStorage from '@react-native-async-storage/async-storage';
 import DateTimePicker from "@react-native-community/datetimepicker";
 import { Picker } from "@react-native-picker/picker";
 
-const API_URL = "http://192.168.88.179:5000";
+import { API_URL } from '../../configs/api';
 
 const EditProfileScreen = ({ route, navigation }) => {
   const { user } = route.params;

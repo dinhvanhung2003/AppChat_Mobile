@@ -132,7 +132,14 @@ const GroupCreateScreen = () => {
       onPress={() => toggleSelect(item._id, item)}
       style={tw`flex-row items-center p-3 border-b bg-white`}
     >
-      <View style={tw`w-10 h-10 rounded-full bg-gray-300 mr-3`} />
+      {item.avatar ? (
+  <Image
+    source={{ uri: item.avatar }}
+    style={tw`w-10 h-10 rounded-full mr-3`}
+  />
+) : (
+  <View style={tw`w-10 h-10 rounded-full bg-gray-300 mr-3`} />
+)}
       <View style={tw`flex-1`}>
         <Text style={tw`text-base font-semibold`}>
           {item.fullName || item.name || item.email}

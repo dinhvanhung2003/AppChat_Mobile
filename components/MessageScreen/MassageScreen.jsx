@@ -27,6 +27,15 @@ const MessageListScreen = () => {
   const navigation = useNavigation();
   const handleTabPress = useTabNavigation();
 
+useEffect(() => {
+  console.log("✅ Online users cập nhật:", onlineUsers);
+}, [onlineUsers]);
+
+
+
+
+
+  
   useEffect(() => {
     const fetchToken = async () => {
       const storedToken = await AsyncStorage.getItem('token');
@@ -35,6 +44,7 @@ const MessageListScreen = () => {
         const decoded = jwtDecode(storedToken);
         setCurrentUserId(decoded.id);
         socket.emit('setup', decoded.id);
+        
       }
     };
     fetchToken();
@@ -46,6 +56,11 @@ const MessageListScreen = () => {
 
 
 useEffect(() => {
+  const handleInitial = ({ userIds }) => {
+    console.log("✅ Nhận initialOnlineFriends:", userIds);
+    setOnlineUsers(userIds);
+  };
+
   const handleFriendOnline = ({ userId }) => {
     setOnlineUsers(prev => Array.from(new Set([...prev, userId])));
   };
@@ -54,23 +69,29 @@ useEffect(() => {
     setOnlineUsers(prev => prev.filter(id => id !== userId));
   };
 
-  socket.on('friendOnline', handleFriendOnline);
-  socket.on('friendOffline', handleFriendOffline);
+  socket.on("initialOnlineFriends", handleInitial);
+  socket.on("friendOnline", handleFriendOnline);
+  socket.on("friendOffline", handleFriendOffline);
 
   return () => {
-    socket.off('friendOnline', handleFriendOnline);
-    socket.off('friendOffline', handleFriendOffline);
+    socket.off("initialOnlineFriends", handleInitial);
+    socket.off("friendOnline", handleFriendOnline);
+    socket.off("friendOffline", handleFriendOffline);
   };
 }, []);
 
-
+// Gọi setup sau khi đã đăng ký listener
 useEffect(() => {
-  const handleInitial = ({ userIds }) => {
-    setOnlineUsers(userIds);
+  const setupSocket = async () => {
+    const storedToken = await AsyncStorage.getItem('token');
+    if (storedToken) {
+      const decoded = jwtDecode(storedToken);
+      setToken(storedToken);
+      setCurrentUserId(decoded.id);
+      socket.emit("setup", decoded.id); // 👈 emit sau khi listener đã đăng ký
+    }
   };
-
-  socket.on("initialOnlineFriends", handleInitial);
-  return () => socket.off("initialOnlineFriends", handleInitial);
+  setupSocket();
 }, []);
 
 

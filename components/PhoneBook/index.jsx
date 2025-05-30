@@ -1,4 +1,4 @@
-import React, { useEffect, useState,useRef } from 'react';
+import React, { useEffect, useState, useRef } from 'react';
 import {
   View, Text, FlatList, TouchableOpacity, Image, Alert,
 } from 'react-native';
@@ -29,56 +29,80 @@ const PhoneBook = () => {
   const [token, setToken] = useState('');
   const navigation = useNavigation();
 
+  useEffect(() => {
+    if (!currentUserId || !token) return;
 
-
-const initiateVideoCall = async (friendId, navigation) => {
-  try {
-    // 1. Yêu cầu quyền camera
-    const { status: cameraStatus } = await Camera.requestCameraPermissionsAsync();
-    const { status: audioStatus } = await Audio.Audio.requestPermissionsAsync();;
-
-    // 2. Kiểm tra quyền
-    if (cameraStatus !== 'granted' || audioStatus !== 'granted') {
-      return Alert.alert(
-        'Yêu cầu quyền',
-        'Bạn cần cấp quyền camera và micro để gọi video. Mở Cài đặt?',
+    socket.on("incomingVideoCall", ({ from, roomUrl }) => {
+      Alert.alert(
+        "📞 Cuộc gọi đến",
+        `${from.fullName} đang gọi cho bạn`,
         [
-          { text: 'Huỷ', style: 'cancel' },
           {
-            text: 'Mở Cài đặt',
-            onPress: () => Linking.openSettings(),
+            text: "Từ chối",
+            style: "cancel",
+          },
+          {
+            text: "Chấp nhận",
+            onPress: () => {
+              const fullUrl = `${roomUrl}?userName=${encodeURIComponent(from.fullName)}`;
+              navigation.navigate("DailyCallScreen", { url: fullUrl });
+            },
           },
         ]
       );
-    }
+    });
 
-    // 3. Nếu được cấp quyền, tiếp tục gọi video
-    const token = await AsyncStorage.getItem('token');
-    const userJson = await AsyncStorage.getItem('user');
-    const user = JSON.parse(userJson);
+    return () => socket.off("incomingVideoCall");
+  }, [currentUserId, token]);
 
-    const res = await axios.post(
-      `${API_URL}/api/daily/create-room`,
-      {
-        conversationId: friendId,
-        fromUser: {
-          _id: user._id,
-          fullName: user.fullName,
-        },
-        toUserId: friendId,
-      },
-      {
-        headers: { Authorization: `Bearer ${token}` },
+  const initiateVideoCall = async (friendId, navigation) => {
+    try {
+      // 1. Yêu cầu quyền camera
+      const { status: cameraStatus } = await Camera.requestCameraPermissionsAsync();
+      const { status: audioStatus } = await Audio.Audio.requestPermissionsAsync();;
+
+      // 2. Kiểm tra quyền
+      if (cameraStatus !== 'granted' || audioStatus !== 'granted') {
+        return Alert.alert(
+          'Yêu cầu quyền',
+          'Bạn cần cấp quyền camera và micro để gọi video. Mở Cài đặt?',
+          [
+            { text: 'Huỷ', style: 'cancel' },
+            {
+              text: 'Mở Cài đặt',
+              onPress: () => Linking.openSettings(),
+            },
+          ]
+        );
       }
-    );
 
-    const url = `${res.data.url}?userName=${encodeURIComponent(user.fullName)}`;
-    navigation.navigate('DailyCallScreen', { url });
-  } catch (err) {
-    console.error('Gọi thất bại:', err);
-    Alert.alert('Không thể gọi video');
-  }
-};
+      // 3. Nếu được cấp quyền, tiếp tục gọi video
+      const token = await AsyncStorage.getItem('token');
+      const userJson = await AsyncStorage.getItem('user');
+      const user = JSON.parse(userJson);
+
+      const res = await axios.post(
+        `${API_URL}/api/daily/create-room`,
+        {
+          conversationId: friendId,
+          fromUser: {
+            _id: user._id,
+            fullName: user.fullName,
+          },
+          toUserId: friendId,
+        },
+        {
+          headers: { Authorization: `Bearer ${token}` },
+        }
+      );
+
+      const url = `${res.data.url}?userName=${encodeURIComponent(user.fullName)}`;
+      navigation.navigate('DailyCallScreen', { url });
+    } catch (err) {
+      console.error('Gọi thất bại:', err);
+      Alert.alert('Không thể gọi video');
+    }
+  };
 
 
   useEffect(() => {
@@ -124,20 +148,20 @@ const initiateVideoCall = async (friendId, navigation) => {
   };
 
   const acceptFriendRequest = async (senderId) => {
-  try {
-    await axios.post(`${API_URL}/api/friendRequests/acceptFriend`, {
-      senderId,
-      receiverId: currentUserId,
-    }, {
-      headers: { Authorization: `Bearer ${token}` },
-    });
+    try {
+      await axios.post(`${API_URL}/api/friendRequests/acceptFriend`, {
+        senderId,
+        receiverId: currentUserId,
+      }, {
+        headers: { Authorization: `Bearer ${token}` },
+      });
 
-    setFriendRequests((prev) => prev.filter((u) => u._id !== senderId));
-    // Không cần gọi fetchFriends ở đây, sẽ được gọi trong socket.on
-  } catch (err) {
-    console.error('❌ Lỗi khi chấp nhận:', err);
-  }
-};
+      setFriendRequests((prev) => prev.filter((u) => u._id !== senderId));
+      // Không cần gọi fetchFriends ở đây, sẽ được gọi trong socket.on
+    } catch (err) {
+      console.error('❌ Lỗi khi chấp nhận:', err);
+    }
+  };
 
 
   const handleRemoveFriend = async (friendId, fullName) => {
@@ -181,12 +205,12 @@ const initiateVideoCall = async (friendId, navigation) => {
     });
 
     socket.on("friendRequestAccepted", ({ sender, receiver }) => {
-  console.log("📥 Socket event: friendRequestAccepted", { sender, receiver });
+      console.log("📥 Socket event: friendRequestAccepted", { sender, receiver });
 
-  if (currentUserId === sender._id || currentUserId === receiver._id) {
-    fetchFriends(token);
-  }
-});
+      if (currentUserId === sender._id || currentUserId === receiver._id) {
+        fetchFriends(token);
+      }
+    });
 
 
     return () => {
@@ -234,25 +258,25 @@ const initiateVideoCall = async (friendId, navigation) => {
         </TouchableOpacity>
       )}
     >
-     <TouchableOpacity
-  onPress={() => handleChatWithFriend(item._id)}
-  style={tw`flex-row items-center justify-between p-4 border-b border-gray-300 bg-white`}
->
-  <View style={tw`flex-row items-center`}>
-    <Image
-      source={{ uri: item.avatar || 'https://i.pravatar.cc/100' }}
-      style={tw`w-12 h-12 rounded-full`}
-    />
-    <Text style={tw`ml-4 text-base font-semibold`}>{item.fullName}</Text>
-  </View>
+      <TouchableOpacity
+        onPress={() => handleChatWithFriend(item._id)}
+        style={tw`flex-row items-center justify-between p-4 border-b border-gray-300 bg-white`}
+      >
+        <View style={tw`flex-row items-center`}>
+          <Image
+            source={{ uri: item.avatar || 'https://i.pravatar.cc/100' }}
+            style={tw`w-12 h-12 rounded-full`}
+          />
+          <Text style={tw`ml-4 text-base font-semibold`}>{item.fullName}</Text>
+        </View>
 
-  <TouchableOpacity
-    onPress={() => initiateVideoCall(item._id, navigation)}
-    style={tw`ml-4`}
-  >
-    <Ionicons name="videocam-outline" size={24} color="#007AFF" />
-  </TouchableOpacity>
-</TouchableOpacity>
+        <TouchableOpacity
+          onPress={() => initiateVideoCall(item._id, navigation)}
+          style={tw`ml-4`}
+        >
+          <Ionicons name="videocam-outline" size={24} color="#007AFF" />
+        </TouchableOpacity>
+      </TouchableOpacity>
 
     </Swipeable>
   );
